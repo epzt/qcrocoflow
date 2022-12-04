@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/plugins/qcrocoflow" >
         <file>icon.png</file>
+        <file>probe.png</file>
     </qresource>
 </RCC>

@@ -44,7 +44,8 @@ PLUGINNAME = qcrocoflow
 
 PY_FILES = \
 	__init__.py \
-	qcrocoflow.py qcrocoflow_dockwidget.py
+	qcrocoflow.py qcrocoflow_dockwidget.py \
+	qcrocotools.py
 
 UI_FILES = qcrocoflow_dockwidget_base.ui
 
