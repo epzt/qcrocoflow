@@ -30,12 +30,11 @@ from qgis.PyQt.QtCore import pyqtSignal
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_dockwidget_base.ui'))
 
-
 class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, _iface, parent=None):
         """Constructor."""
         super(qcrocoflowDockWidget, self).__init__(parent)
         # Set up the user interface from Designer.
@@ -43,7 +42,53 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # self.<objectname>, and you can use autoconnect slots - see
         # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
-        self.setupUi(self)
+
+        # Get pointer on QGIS interface
+        self.iface  = _iface
+
+        self.myQMenuBar = QtWidgets.QMenuBar(self)
+        # Project
+        projectMenu = self.myQMenuBar.addMenu('Project')
+        newProjectAction = QtWidgets.QAction('New', self)
+        newProjectAction.triggered.connect(self.printHello)
+        projectMenu.addAction(newProjectAction)
+        # ---
+        openProjectAction = QtWidgets.QAction('Open', self)
+        openProjectAction.triggered.connect(self.printHello)
+        projectMenu.addAction(openProjectAction)
+        # ---
+        saveProjectAction = QtWidgets.QAction('Save', self)
+        saveProjectAction.triggered.connect(self.printHello)
+        projectMenu.addAction(saveProjectAction)
+        # ---
+        projectMenu.addSeparator()
+        # ---
+        quitProjectAction = QtWidgets.QAction('Quit', self)
+        quitProjectAction.triggered.connect(self.printHello)
+        projectMenu.addAction(quitProjectAction)
+
+        # Grid
+        gridMenu = self.myQMenuBar.addMenu('Grid')
+        newGridAction = QtWidgets.QAction('New', self)
+        newGridAction.triggered.connect(self.printHello)
+        gridMenu.addAction(newGridAction)
+        # ---
+        openGridAction = QtWidgets.QAction('Open', self)
+        openGridAction.triggered.connect(self.printHello)
+        gridMenu.addAction(openGridAction)
+        # ---
+        gridMenu.addSeparator()
+        # ---
+        initialConditionAction = QtWidgets.QAction('IC', self)
+        initialConditionAction.triggered.connect(self.printHello)
+        gridMenu.addAction(initialConditionAction)
+        # ---
+        openBoundaryConditionAction = QtWidgets.QAction('OBC', self)
+        openBoundaryConditionAction.triggered.connect(self.printHello)
+        gridMenu.addAction(openBoundaryConditionAction)
+        #self.setupUi(self)
+    def printHello(self):
+        print('Hello')
 
     def closeEvent(self, event):
         self.closingPlugin.emit()

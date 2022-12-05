@@ -73,7 +73,6 @@ class qcrocoflow:
         self.pluginIsActive = False
         self.dockwidget = None
 
-
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -88,7 +87,6 @@ class qcrocoflow:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('qcrocoflow', message)
-
 
     def add_action(
         self,
@@ -163,7 +161,6 @@ class qcrocoflow:
 
         return action
 
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -221,7 +218,7 @@ class qcrocoflow:
             #    removed on close (see self.onClosePlugin method)
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
-                self.dockwidget = qcrocoflowDockWidget()
+                self.dockwidget = qcrocoflowDockWidget(self.iface)
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
