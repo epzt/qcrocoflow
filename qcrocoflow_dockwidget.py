@@ -27,6 +27,8 @@ import os
 from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 
+from qgis.PyQt.QtWidgets import QDialog, QMessageBox, QFileDialog, QGridLayout, QComboBox, QMenuBar, QAction
+
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_dockwidget_base.ui'))
 
@@ -45,16 +47,16 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Get pointer on QGIS interface
         self.iface  = _iface
-
-        self.myQMenuBar = QtWidgets.QMenuBar(self)
-        # Project
+        # Construction of menu bar entries and relative actions
+        self.myQMenuBar = QMenuBar(self)
+        ### Project ###
         projectMenu = self.myQMenuBar.addMenu('Project')
-        newProjectAction = QtWidgets.QAction('New', self)
-        newProjectAction.triggered.connect(self.printHello)
+        newProjectAction = QAction('New', self)
+        newProjectAction.triggered.connect(self.NewProject)
         projectMenu.addAction(newProjectAction)
         # ---
-        openProjectAction = QtWidgets.QAction('Open', self)
-        openProjectAction.triggered.connect(self.printHello)
+        openProjectAction = QAction('Open', self)
+        openProjectAction.triggered.connect(self.OpenProject)
         projectMenu.addAction(openProjectAction)
         # ---
         saveProjectAction = QtWidgets.QAction('Save', self)
@@ -63,33 +65,77 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # ---
         projectMenu.addSeparator()
         # ---
-        quitProjectAction = QtWidgets.QAction('Quit', self)
-        quitProjectAction.triggered.connect(self.printHello)
-        projectMenu.addAction(quitProjectAction)
-
-        # Grid
+        closeProjectAction = QAction('Close', self)
+        closeProjectAction.triggered.connect(self.CloseCrocoFlow)
+        projectMenu.addAction(closeProjectAction)
+        ### Grid ###
         gridMenu = self.myQMenuBar.addMenu('Grid')
-        newGridAction = QtWidgets.QAction('New', self)
+        newGridAction = QAction('New', self)
         newGridAction.triggered.connect(self.printHello)
         gridMenu.addAction(newGridAction)
         # ---
-        openGridAction = QtWidgets.QAction('Open', self)
+        openGridAction = QAction('Open', self)
         openGridAction.triggered.connect(self.printHello)
         gridMenu.addAction(openGridAction)
         # ---
         gridMenu.addSeparator()
         # ---
-        initialConditionAction = QtWidgets.QAction('IC', self)
+        initialConditionAction = QAction('IC', self)
         initialConditionAction.triggered.connect(self.printHello)
         gridMenu.addAction(initialConditionAction)
         # ---
-        openBoundaryConditionAction = QtWidgets.QAction('OBC', self)
+        openBoundaryConditionAction = QAction('OBC', self)
         openBoundaryConditionAction.triggered.connect(self.printHello)
         gridMenu.addAction(openBoundaryConditionAction)
         #self.setupUi(self)
-    def printHello(self):
+        # Variables
+        self.projectOpened = False
+        self.projectName = None
+        self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
+
+    def printHello(self) -> None:
         print('Hello')
 
-    def closeEvent(self, event):
+    def NewProject(self) -> None:
+    # Create a new empty QCrocoFlow project
+        self.projectOpened = True
+        return
+
+    def OpenProject(self) -> None:
+        # Open an existing QCrocoFlow  project
+        if self.projectOpened and self.projectName:
+            QMessageBox.warning(self, "Project file", f"The QCrocoFlow project {self.projectName} is currently opened.\nClose it before open a new one")
+            return
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.setNameFilter("QCF project (*.qcf *.QCF)") # This is the good one
+        dialog.setNameFilter("QCF project (*.txt *.TXT)") # Just for dev purpose -> TODO: eliminate asap
+        dialog.setWindowTitle("Open QCrocoFlow existing project file")
+        dialog.setViewMode(QFileDialog.Detail)
+        if (dialog.exec()):
+            selectedFileName = dialog.selectedFiles()[0] # Get the fisrt element of the returned list
+            self.projectName = os.path.basename(selectedFileName)
+            self.projectDirectory = os.path.dirname(selectedFileName)
+            self.projectOpened = True
+        else:
+            QMessageBox.information(self, "Project file", "No QCrocoFlow project file selected")
+        return
+
+    def CloseCrocoFlow(self) -> None:
+    # Manage close de project: empty runtime variables, etc.
+        if not self.projectOpened:
+            QMessageBox.information(self, "Project file", "No QCrocoFlow project yet opened")
+            return
+        ans = QMessageBox.question(self, "Project file", f"Do you really want to close {self.projectName} project ?", \
+                             buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, \
+                             defaultButton = QMessageBox.StandardButton.No)
+        if ans == QMessageBox.StandardButton.Yes:
+            # TODO: manage cleanup variables here
+            self.projectName = None
+            self.projectDirectory = os.path.expanduser("~user")
+            self.projectOpened = False
+        return
+
+    def closeEvent(self, event)-> None:
         self.closingPlugin.emit()
         event.accept()
