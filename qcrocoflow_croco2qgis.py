@@ -25,13 +25,15 @@ import os
 import netCDF4 as nc
 import difflib
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from qgis.PyQt import QtGui, QtWidgets, uic, Qt
 #from qgis.PyQt.QtWidgets import QDialog
 from qgis.PyQt.QtCore import pyqtSignal
 
-from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog, QGridLayout, QComboBox
+from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog, QVBoxLayout, QComboBox
+from .qcrocoflow_config import *
+from .qcrocoflow_timereference import qcrocoflowTIMEREFERENCE
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_croco2qgis_dialog.ui'), resource_suffix='') # Change 13/05/2022
@@ -41,17 +43,17 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
         super(qcrocoflowCROCO2QGIS, self).__init__(parent)
         # Final Setup
         self.setupUi(self)
-        # Variables iitialisations
+        # Variables initialisations
         self.innetCDFFileName = None
         self.currentDirectory = currentDir
-        self.importProgressBar.setValue(0)
+        self.dVars = dict()
 
         self.innetCDFFileNameButton.clicked.connect(self.SelectNetCDFInFile)
         self.innetCDFStartDateDate.dateTimeChanged.connect(self.StartDateTimeChanged)
         self.innetCDFEndDateDate.dateTimeChanged.connect(self.EndDateTimeChanged)
 
     def GetVariablesWithDim(self, _dataset, _dim) -> list:
-    # Return a list of variables width 3 dimensions """
+    # Return a list of variables width _dim dimensions """
         retList = list()
         for v in _dataset.variables:
             if _dataset[v].ndim == _dim:
@@ -101,22 +103,37 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
                 else:
                     self.DeleteLayout(item.layout())
 
-    def UpdateVariablesComboBox(self, _ldicts) -> None:
+    def UpdateVariablesComboBox(self, _ldicts: dict) -> None:
     # Create combobox and fill them according variable lists"""
-        # Delete evnetualy previous comboboxes
+        # Delete eventually previous comboboxes
         self.DeleteLayout(self.variablesGroupBox.layout())
-        gbox = QGridLayout()
-        gbox.setSpacing(10)
+        if self.variablesGroupBox.layout() is not None:
+            gbox = self.variablesGroupBox.layout()
+        else:
+            gbox = QVBoxLayout()
         cbs = list()
         for d in _ldicts:
             if len(d["vars"]) == 0:
                 continue
             cbs.append(QComboBox(self))
+            cbs[-1].setAccessibleName(str(d["dim"]))
             cbs[-1].addItem("(var{}D)".format(d["dim"]))
             cbs[-1].addItems(d["vars"])
+            cbs[-1].currentTextChanged.connect(self.VariableChanged)
             gbox.addWidget(cbs[-1])
+        gbox.addStretch(10)
         self.variablesGroupBox.setLayout(gbox)
         return
+
+    def VariableChanged(self, _str: str) -> None:
+    # Create/update the dictionary of variables selected for each dimension of the netcdf file
+        self.dVars[self.sender().accessibleName()] = _str
+
+    def GetTimeReference(self, _minT, _maxT) -> tuple:
+    # Ask user for reference time of the netCDF file
+        dlg = qcrocoflowTIMEREFERENCE(_minT, _maxT, self)
+        dlg.exec()
+        return dlg.GetMinRefrenceTime(), dlg.GetMaxRefrenceTime()
 
     def UpdateStartEndDate(self, _min, _max) -> None:
     # Update calendar widget according time """
@@ -126,27 +143,24 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
         self.innetCDFEndDateDate.setDateRange(_min, _max)
         return
 
-    def GetInformationFromNetCDFFile(self, _file) -> tuple:
-    # Update calendar widget according time found in variables"""
+    def GetInformationFromNetCDFFile(self, _file: str) -> list:
+    # Create/update widgets of the dialog according variables found"""
         try:
             dataset = nc.Dataset(_file, 'r')
         except:
             QMessageBox.warning(self, "Error", f"Can not open/access file {self.innetCDFFileName}")
             return
-        # look for a time variable
+        # look if a time variable is present in the netCDF dataset
         present, tName, nbrTimeSteps = self.IsTimeDimension(dataset)
         if present:
             minTime = np.nanmin(dataset[tName][:])
             maxTime = np.nanmax(dataset[tName][:])
-            minDate = datetime.fromtimestamp(minTime)
-            maxDate = datetime.fromtimestamp(maxTime)
-            # QMessageBox.information(self, "info", f"Found time from {minDate.isoformat()} to {maxDate.isoformat()}")
-            self.innetCDFStartDateDate.setDateTime(minDate)
-            self.innetCDFStartDateDate.setDateRange(minDate, maxDate)
-            self.innetCDFEndDateDate.setDateTime(maxDate)
-            self.innetCDFEndDateDate.setDateRange(minDate, maxDate)
+            minDate = datetime.utcfromtimestamp(minTime)
+            maxDate = datetime.utcfromtimestamp(maxTime)
+            minDate, maxDate = self.GetTimeReference(minDate, maxDate)
+            self.UpdateStartEndDate(minDate, maxDate)
         else:
-            QMessageBox.information(self, "info", f"Time dimension not found in {self.innetCDFFileName}")
+            QMessageBox.information(self, "Information", f"{self.innetCDFFileName} as no time dimension")
             minDate = datetime.fromtimestamp(0)
             maxDate = datetime.fromtimestamp(0)
         # Normaly 2D variables have no time dimension
@@ -155,22 +169,39 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
         dVar3D = {"dim":3, "vars":self.GetVariablesWithDim(dataset, 3)}
         # Normaly all 4D variables have a time dimension
         dVar4D = {"dim":4, "vars":self.GetVariablesWithDim(dataset, 4)}
-        return ([minDate, maxDate], [dVar2D, dVar3D, dVar4D])
+        return [dVar2D, dVar3D, dVar4D]
 
-    def SelectNetCDFInFile(self) -> None:
-        fileName = QFileDialog.getOpenFileName(self, "Open CROCO result netCDF file", \
-                                               self.currentDirectory, "netCDF (*.nc *.NC)")
-        if not fileName:
+    def SelectNetCDFInFile(self) -> tuple:
+    # Allows the user to choose a netCDF file to read
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.setNameFilter("netCDF (*.nc *.NC)")  # Just for dev purpose -> TODO: eliminate asap
+        dialog.setWindowTitle("Open CROCO result netCDF file")
+        dialog.setDirectory(self.currentDirectory)
+        dialog.setViewMode(QFileDialog.Detail)
+        if not dialog.exec():
             return
+        selectedFileName = dialog.selectedFiles()[0] # Get the fisrt element of the returned list
+        if not selectedFileName:
+            return
+        # Updating variables according last choice
+        self.innetCDFFileName = os.path.basename(selectedFileName)
+        self.currentDirectory = os.path.dirname(selectedFileName)
+        # Updating of linedit on the dialog
         if self.innetCDFFileName == "":
             self.innetCDFFileNameLineEdit.setText("")
             return
-        if isinstance(fileName, tuple):
-            self.innetCDFFileName = fileName[0]
-        self.innetCDFFileNameLineEdit.setText(os.path.basename(self.innetCDFFileName))
-
-        lDate, ldVars = self.GetInformationFromNetCDFFile(self.innetCDFFileName)
-        self.UpdateStartEndDate(lDate[0], lDate[1])
+        self.innetCDFFileNameLineEdit.setText(self.innetCDFFileName)
+        # Get dates (if present) and dictionary of variables present in the netCDF file
+        ldVars = self.GetInformationFromNetCDFFile(selectedFileName)
         self.UpdateVariablesComboBox(ldVars)
-
         return
+
+    def GetNetCDFFileName(self) -> tuple:
+        if self.currentDirectory is not None and self.innetCDFFileName is not None:
+            return os.path.join(self.currentDirectory, self.innetCDFFileName)
+        else:
+            return ""
+
+    def GetDictOfVars(self) -> tuple:
+        return self.dVars

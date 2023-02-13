@@ -34,11 +34,10 @@ LOCALES = en
 #LRELEASE = lrelease
 #LRELEASE = lrelease-qt4
 
-
 # translation
 SOURCES = \
 	__init__.py \
-	qcrocoflow.py qcrocoflow_dockwidget.py
+	qcrocoflow.py qcrocoflow_dockwidget.py qcrocoflow_croco2qgis.py qcrocoflow_timerefrence.py
 
 PLUGINNAME = qcrocoflow
 
@@ -47,7 +46,7 @@ PY_FILES = \
 	qcrocoflow.py qcrocoflow_dockwidget.py \
 	qcrocotools.py
 
-UI_FILES = qcrocoflow_dockwidget_base.ui
+UI_FILES = qcrocoflow_dockwidget_base.ui qcrocoflow_croco2qgis_dialog.ui qcrocoflow_timereference_dialog.ui
 
 EXTRAS = metadata.txt icon.png
 

@@ -23,13 +23,19 @@
 """
 
 import os
+from pathlib import Path
 
 from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtCore import pyqtSignal, Qt, QEvent
+from qgis.core import QgsCoordinateReferenceSystem, QgsRasterLayer, QgsProject
 
-from qgis.PyQt.QtWidgets import QDialog, QMessageBox, QFileDialog, QGridLayout, QComboBox, QMenuBar, QAction
+from qgis.PyQt.QtWidgets import QDialog, QMessageBox, QFileDialog, QGridLayout, QComboBox, QMenuBar, QAction, QMainWindow
+
+import netCDF4 as nc
 
 from .qcrocoflow_croco2qgis import qcrocoflowCROCO2QGIS
+from .qcrocoflow_qcrocotools import netCDFtoRaster
+from .qcrocoflow_config import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_dockwidget_base.ui'))
@@ -53,17 +59,28 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.myQMenuBar = QMenuBar(self)
         ### Project ################################
         projectMenu = self.myQMenuBar.addMenu('Project')
-        newProjectAction = QAction('New', self)
+        newProjectAction = QAction('New...', self)
         newProjectAction.triggered.connect(self.NewProject)
         projectMenu.addAction(newProjectAction)
         # ---
-        openProjectAction = QAction('Open', self)
+        openProjectAction = QAction('Open...', self)
         openProjectAction.triggered.connect(self.OpenProject)
         projectMenu.addAction(openProjectAction)
         # ---
-        saveProjectAction = QtWidgets.QAction('Save', self)
+        saveProjectAction = QAction('Save', self)
         saveProjectAction.triggered.connect(self.SaveProject)
         projectMenu.addAction(saveProjectAction)
+        # ---
+        saveProjectAction = QAction('Save as...', self)
+        saveProjectAction.triggered.connect(self.SaveAsProject)
+        projectMenu.addAction(saveProjectAction)
+        # ---
+        projectMenu.addSeparator()
+        # ---
+        globalSettingsMenu = projectMenu.addMenu('Settings')
+        workingDirectoryAction = QAction(' Set working directory...', self)
+        workingDirectoryAction.triggered.connect(self.WorkingDirectory)
+        globalSettingsMenu.addAction(workingDirectoryAction)
         # ---
         projectMenu.addSeparator()
         # ---
@@ -72,43 +89,60 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         projectMenu.addAction(closeProjectAction)
         ### Grid ################################
         gridMenu = self.myQMenuBar.addMenu('Grid')
-        newGridAction = QAction('New', self)
+        newGridAction = QAction('New...', self)
         newGridAction.triggered.connect(self.NewGrid)
         gridMenu.addAction(newGridAction)
         # ---
-        openGridAction = QAction('Open', self)
-        openGridAction.triggered.connect(self.OpenGrid)
+        openGridAction = QAction('Import...', self)
+        openGridAction.triggered.connect(self.ImportGrid)
         gridMenu.addAction(openGridAction)
         # ---
         gridMenu.addSeparator()
         # ---
-        initialConditionAction = QAction('IC', self)
+        setConditionMenu= gridMenu.addMenu('Set conditions')
+        initialConditionAction = QAction('Initial...', self)
         initialConditionAction.triggered.connect(self.printHello)
-        gridMenu.addAction(initialConditionAction)
+        setConditionMenu.addAction(initialConditionAction)
         # ---
-        openBoundaryConditionAction = QAction('OBC', self)
+        openBoundaryConditionAction = QAction('Boundary...', self)
         openBoundaryConditionAction.triggered.connect(self.printHello)
-        gridMenu.addAction(openBoundaryConditionAction)
+        setConditionMenu.addAction(openBoundaryConditionAction)
         ### Sediment ################################
         sedimentMenu = self.myQMenuBar.addMenu('Sediment')
-        newSedimentAction = QAction('New', self)
+        newSedimentAction = QAction('New...', self)
         newSedimentAction.triggered.connect(self.NewSediment)
         sedimentMenu.addAction(newSedimentAction)
         # ---
-        openSedimentAction = QAction('Open', self)
+        openSedimentAction = QAction('Open...', self)
         openSedimentAction.triggered.connect(self.OpenSediment)
         sedimentMenu.addAction(openSedimentAction)
         # ---
+        ### Tools ################################
+        toolsMenu = self.myQMenuBar.addMenu('Tools')
+        picCellAction = QAction('Get I,J...', self)
+        picCellAction.triggered.connect(self.GetCellIJ)
+        toolsMenu.addAction(picCellAction)
+        # ---
+        openSedimentAction = QAction('Open...', self)
+        openSedimentAction.triggered.connect(self.OpenSediment)
+        toolsMenu.addAction(openSedimentAction)
+        # ---
         gridMenu.addSeparator()
         # ---
+        ### Mars ################################
+        marsMenu = self.myQMenuBar.addMenu('Mars')
+        importMarstAction = QAction('Import...', self)
+        importMarstAction.triggered.connect(self.ImportMarsResults)
+        marsMenu.addAction(importMarstAction)
 
-        # TODO: define other menu entries from herre
+        # TODO: define other menu entries from here
 
         #self.setupUi(self)
         # Variables
         self.projectOpened = False
         self.projectName = None
         self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
+        self.currentWorkingDIrectory = os.path.expanduser("~user") # Default value for working directory
 
     def printHello(self) -> None:
         print('Hello')
@@ -155,11 +189,16 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.projectName = os.path.basename(selectedFileName)
             self.projectDirectory = os.path.dirname(selectedFileName)
             self.projectOpened = True
+            # TODO: manage import of project file here
         else:
             QMessageBox.information(self, "Project file", "No QCrocoFlow project file selected")
         return
 
     def SaveProject(self) -> None:
+        QMessageBox.information(self, "Project file", "Not implemented yet")
+        return
+
+    def SaveAsProject(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")
         return
 
@@ -175,16 +214,100 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # TODO: manage cleanup variables here
             self.projectName = None
             self.projectDirectory = os.path.expanduser("~user")
+            self.currentWorkingDIrectory = os.path.expanduser("~user")
             self.projectOpened = False
         return
 
+    def WorkingDirectory(self) -> None:
+        wkDir = QFileDialog.getExistingDirectory(self, "Select a working directory", self.projectDirectory,\
+                                                 QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+        if not wkDir:
+            QMessageBox.information(self, "Set working directory", f"No new working directory\nCurrent working directory is {self.currentWorkingDIrectory}")
+            return
+        self.currentWorkingDIrectory = wkDir
+        QMessageBox.information(self, "Set working directory",
+                                f"New working directory selected:\n{self.currentWorkingDIrectory}")
+        return
     def NewGrid(self) -> None:
+    # Creation of a new grid
         QMessageBox.information(self, "Project file", "Not implemented yet")
         return
-    def OpenGrid(self) -> None:
-        grid = qcrocoflowCROCO2QGIS(self.projectDirectory, self)
-        grid.show()
+    def ImportGrid(self) -> None:
+    # Import variables from a netCDF file to create raster or vector layers in QGIS
+        openGridDlg = qcrocoflowCROCO2QGIS(self.currentWorkingDIrectory, self)
+        if openGridDlg.exec():
+            ncFile = openGridDlg.GetNetCDFFileName()
+            varDictList = openGridDlg.GetDictOfVars() # A dictionary of selected variables is returned for each dimension
+            if len(varDictList.keys()) == 0:
+                QMessageBox.information(self, 'List of variables', f"No variable selected.")
+                return
+            self.AddNetCDFVariablesToMapset(ncFile, varDictList)
         return
+    def AddNetCDFVariablesToMapset(self, _file: str, _varsDictList: dict) -> None:
+    # Add a raster to the current mapset based on a variable from a netCDF file
+        try:
+            ncdata = nc.Dataset(_file)
+        except:
+            QMessageBox.warning(self, 'Error', f"Can't open file {_file}")
+            return
+
+        # Get an existing group layer or define a new one into which add the raster layer(s)
+        currentgrp = self.DefineGroupFortLayer(_file)
+        # Initialisation of object that will convert netCDF variables to raster layer SRC: WGS84 by default
+        nc2r = netCDFtoRaster(QgsCoordinateReferenceSystem(EPSGWGS84))
+
+        for k in _varsDictList.keys():
+            # Get the path of actual _file localisation and add the name of the file without its extension
+            outputDirPath = os.path.join(os.path.dirname(_file), Path(_file).stem)
+            # Create a new directory if not exist based on the previous path
+            if not os.path.isdir(outputDirPath):
+                os.mkdir(outputDirPath)
+            rfilename = os.path.join(outputDirPath, f"{_varsDictList[k]}.tif")
+            # If the file exist, ask to keep or delete it
+            if os.path.exists(rfilename):
+                if QMessageBox.question(self, "Erase existing", f"File {rfilename} is present.\nErase it ?", \
+                                        QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) == QMessageBox.Yes:
+                    os.remove(rfilename)  # delete the file
+                    if int(k) > 4:
+                        QMessageBox.warning(self, 'Error', f"Dimension is not mange ({k}D)")
+                        return
+                    extent = nc2r.createRaster(ncdata['lon_rho'][:], ncdata['lat_rho'][:], ncdata[_varsDictList[k]][:],
+                                               rfilename, int(k))
+            else:
+                if int(k) > 4:
+                    QMessageBox.warning(self, 'Error', f"Dimension is not mange ({k}D)")
+                    return
+                extent = nc2r.createRaster(ncdata['lon_rho'][:], ncdata['lat_rho'][:], ncdata[_varsDictList[k]][:],
+                                               rfilename, int(k))
+            # Some operations to initialise the layer for visualisation
+            rlayer = QgsRasterLayer(rfilename)
+            rlayer.setName(_varsDictList[k])
+            # Add the new layer to the group
+            currentgrp.addLayer(rlayer)
+            QgsProject.instance().addMapLayer(rlayer, False)
+        ncdata.close()
+
+    def DefineGroupFortLayer(self, _file: str) -> tuple:
+        root = QgsProject.instance().layerTreeRoot()
+        grplist = [child for child in root.children() if child.nodeType() == 0]
+        grpnames = [grpname.name() for grpname in grplist]
+        if os.path.basename(_file) in grpnames:
+            grpids = [index for (index, item) in enumerate(grpnames) if item == os.path.basename(_file)]
+            if QMessageBox.information(self, 'Group exist',
+                                       f"The group {os.path.basename(_file)} exist\nDo you want to delete it ?",
+                                       QMessageBox.Yes | QMessageBox.No, \
+                                       QMessageBox.Yes) == QMessageBox.Yes:
+                for id in grpids:
+                    root.removeChildNode(grplist[id])
+                # Create a new group with the name of the selected netCDF file
+                currentgrp = root.addGroup(os.path.basename(_file))
+            else:
+                # Current group still exist and is selected to add the new layer in it
+                currentgrp = grplist[0]  # Should contains only one element
+        else:
+            # The group does not exist, create it
+            currentgrp = root.addGroup(os.path.basename(_file))
+        return currentgrp
 
     def NewSediment(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")
@@ -197,3 +320,11 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def closeEvent(self, event)-> None:
         self.closingPlugin.emit()
         event.accept()
+
+    def GetCellIJ(self):
+        QMessageBox.information(self, "Project file", "Not implemented yet")
+        return
+
+    def ImportMarsResults(self) -> None:
+        QMessageBox.information(self, "Project file", "Not implemented yet")
+        return

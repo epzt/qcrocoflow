@@ -208,12 +208,12 @@ class netcdfVariablesDlg(QDialog):
         return retvarlistname
 
 class netCDFtoRaster():
-    """ Class to manage rasters/grids from a netCDF file """
+# Class to manage rasters/grids from a netCDF file
     def __init__(self, _crs):
         self.CRS = _crs
 
-    def createRaster(self, _x, _y, _array, _varname) -> tuple:
-        """ Create a raster from a variable located in a netCDF file"""
+    def createRaster(self, _x:np.array, _y:np.array, _array:np.array, _varname:str, _dim:int) -> tuple:
+    # Create a raster from a variable located in a netCDF file
         # creating a constant raster which will be overwritten later
         extent = QgsRectangle()
         extent.setXMinimum(np.nanmin(_x[0,:]))
@@ -223,13 +223,26 @@ class netCDFtoRaster():
 
         pxsize = np.nanmean(np.diff(_x[0,:]))
         pysize = np.nanmean(np.diff(_y[:,0]))
-        ny, nx = _array.shape
         # gdal creation options
-        #gdal.SetConfigOption('GDAL_TIFF_INTERNAL_MASK','YES')
-        # Create the raster
-        ds = gdal.GetDriverByName("GTiff").Create(_varname, xsize=nx, ysize=ny, bands=1, eType=gdal.GDT_Float64,
-                                                  options=["TILED=YES"])
-        ds.GetRasterBand(1).WriteArray(np.flip(_array,0))
+        # gdal.SetConfigOption('GDAL_TIFF_INTERNAL_MASK','YES')
+        if _dim == 2:
+            ny, nx = _array.shape
+            # Create the raster
+            ds = gdal.GetDriverByName("GTiff").Create(_varname, xsize=nx, ysize=ny, bands=1, eType=gdal.GDT_Float64,
+                                                      options=["TILED=YES"])
+            ds.GetRasterBand(1).WriteArray(np.flip(_array, 0))
+        elif _dim == 3:
+            _, ny, nx = _array.shape # first dimension is the vertical one
+            # Create the raster
+            ds = gdal.GetDriverByName("GTiff").Create(_varname, xsize=nx, ysize=ny, bands=1, eType=gdal.GDT_Float64,
+                                                      options=["TILED=YES"])
+            ds.GetRasterBand(1).WriteArray(np.flip(_array[0, :, :], 0))
+        elif _dim == 4:
+            _, _, ny, nx = _array.shape # fisrt dimension is the time and the second is the vertical
+            # Create the raster
+            ds = gdal.GetDriverByName("GTiff").Create(_varname, xsize=nx, ysize=ny, bands=1, eType=gdal.GDT_Float64,
+                                          options=["TILED=YES"])
+            ds.GetRasterBand(1).WriteArray(np.flip(_array[0, 0, :, :], 0))
         ds.SetProjection(self.CRS.toWkt())
         ds.GetRasterBand(1).GetStatistics(0, 1)
         ds.GetRasterBand(1).SetNoDataValue(-32768)
