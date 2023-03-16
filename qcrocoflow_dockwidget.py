@@ -25,11 +25,35 @@
 import os
 from pathlib import Path
 
-from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt, QEvent
-from qgis.core import QgsCoordinateReferenceSystem, QgsRasterLayer, QgsProject
+from qgis.gui import (
+    QgsMapToolEmitPoint,
+    QgsMessageBar)
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsRasterLayer,
+    QgsProject,
+    QgsMessageLog,
+    Qgis)
 
-from qgis.PyQt.QtWidgets import QDialog, QMessageBox, QFileDialog, QGridLayout, QComboBox, QMenuBar, QAction, QMainWindow
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt, QEvent, QRect
+from qgis.PyQt.QtWidgets import (
+    QDialog,
+    QMessageBox,
+    QFileDialog,
+    QVBoxLayout, QHBoxLayout, QGridLayout,
+    QComboBox,
+    QMenuBar,
+    QAction,
+    QMainWindow,
+    QApplication,
+    QTextEdit,
+    QToolBar,
+    QLabel,
+    QDockWidget,
+    QWidget,
+    QLineEdit,
+    QPushButton)
 
 import netCDF4 as nc
 
@@ -137,12 +161,23 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # TODO: define other menu entries from here
 
-        #self.setupUi(self)
+        self.setupUi(self)
+
         # Variables
         self.projectOpened = False
         self.projectName = None
         self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
         self.currentWorkingDIrectory = os.path.expanduser("~user") # Default value for working directory
+
+        # Variables for mouse tracking events
+        canvas = self.iface.mapCanvas()
+        self.pointTool = QgsMapToolEmitPoint(canvas)
+        self.pointTool.canvasClicked.connect(self.display_point)
+
+    def display_point(self, pnt):
+        QMessageBox.information(self.iface.mainWindow(), "Coordinate tracking", "x: {:.6f} - y: {:.6f}".format(pnt[0], pnt[1]))
+        canvas = self.iface.mapCanvas()
+        canvas.unsetMapTool(self.pointTool)
 
     def printHello(self) -> None:
         print('Hello')
@@ -225,8 +260,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             QMessageBox.information(self, "Set working directory", f"No new working directory\nCurrent working directory is {self.currentWorkingDIrectory}")
             return
         self.currentWorkingDIrectory = wkDir
-        QMessageBox.information(self, "Set working directory",
-                                f"New working directory selected:\n{self.currentWorkingDIrectory}")
+        self.iface.messageBar().pushMessage("New working directory selected", f"{self.currentWorkingDIrectory}", level=Qgis.Info)
         return
     def NewGrid(self) -> None:
     # Creation of a new grid
@@ -237,57 +271,58 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         openGridDlg = qcrocoflowCROCO2QGIS(self.currentWorkingDIrectory, self)
         if openGridDlg.exec():
             ncFile = openGridDlg.GetNetCDFFileName()
-            varDictList = openGridDlg.GetDictOfVars() # A dictionary of selected variables is returned for each dimension
-            if len(varDictList.keys()) == 0:
+            varsDict = openGridDlg.GetDictOfVars() # A dictionary of selected variables is returned for each dimension
+            coordsDict = openGridDlg.GetDictOfCoords() # A dictionary of selected coordinate variables
+            if len(varsDict.keys()) == 0:
                 QMessageBox.information(self, 'List of variables', f"No variable selected.")
                 return
-            self.AddNetCDFVariablesToMapset(ncFile, varDictList)
+            self.AddNetCDFVariablesToMapset(ncFile, varsDict, coordsDict)
         return
-    def AddNetCDFVariablesToMapset(self, _file: str, _varsDictList: dict) -> None:
+    def AddNetCDFVariablesToMapset(self, _file: str, _varsDict: dict, _coordsDict: dict) -> None:
     # Add a raster to the current mapset based on a variable from a netCDF file
         try:
-            ncdata = nc.Dataset(_file)
+            ncdata = nc.Dataset(_file, 'r')
         except:
             QMessageBox.warning(self, 'Error', f"Can't open file {_file}")
             return
 
         # Get an existing group layer or define a new one into which add the raster layer(s)
-        currentgrp = self.DefineGroupFortLayer(_file)
+        currentgrp = self.DefineGroup4Layer(_file)
         # Initialisation of object that will convert netCDF variables to raster layer SRC: WGS84 by default
         nc2r = netCDFtoRaster(QgsCoordinateReferenceSystem(EPSGWGS84))
 
-        for k in _varsDictList.keys():
+        for k in _varsDict.keys():
             # Get the path of actual _file localisation and add the name of the file without its extension
             outputDirPath = os.path.join(os.path.dirname(_file), Path(_file).stem)
             # Create a new directory if not exist based on the previous path
             if not os.path.isdir(outputDirPath):
                 os.mkdir(outputDirPath)
-            rfilename = os.path.join(outputDirPath, f"{_varsDictList[k]}.tif")
+            rfilename = os.path.join(outputDirPath, f"{_varsDict[k]}.tif")
             # If the file exist, ask to keep or delete it
             if os.path.exists(rfilename):
                 if QMessageBox.question(self, "Erase existing", f"File {rfilename} is present.\nErase it ?", \
                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) == QMessageBox.Yes:
                     os.remove(rfilename)  # delete the file
                     if int(k) > 4:
-                        QMessageBox.warning(self, 'Error', f"Dimension is not mange ({k}D)")
+                        QMessageBox.warning(self, 'Error', f"{k}D dimension is not manage.")
                         return
-                    extent = nc2r.createRaster(ncdata['lon_rho'][:], ncdata['lat_rho'][:], ncdata[_varsDictList[k]][:],
+                    extent = nc2r.createRaster(ncdata[_coordsDict['lon']][:], ncdata[_coordsDict['lat']][:], ncdata[_varsDict[k]][:],
                                                rfilename, int(k))
             else:
                 if int(k) > 4:
-                    QMessageBox.warning(self, 'Error', f"Dimension is not mange ({k}D)")
+                    QMessageBox.warning(self, 'Error', f"{k}D dimension is not manage.")
                     return
-                extent = nc2r.createRaster(ncdata['lon_rho'][:], ncdata['lat_rho'][:], ncdata[_varsDictList[k]][:],
+                extent = nc2r.createRaster(ncdata[_coordsDict['lon']][:], ncdata[_coordsDict['lat']][:], ncdata[_varsDict[k]][:],
                                                rfilename, int(k))
             # Some operations to initialise the layer for visualisation
             rlayer = QgsRasterLayer(rfilename)
-            rlayer.setName(_varsDictList[k])
+            rlayer.setName(_varsDict[k])
             # Add the new layer to the group
             currentgrp.addLayer(rlayer)
             QgsProject.instance().addMapLayer(rlayer, False)
         ncdata.close()
 
-    def DefineGroupFortLayer(self, _file: str) -> tuple:
+    def DefineGroup4Layer(self, _file: str) -> tuple:
         root = QgsProject.instance().layerTreeRoot()
         grplist = [child for child in root.children() if child.nodeType() == 0]
         grpnames = [grpname.name() for grpname in grplist]
@@ -310,7 +345,32 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         return currentgrp
 
     def NewSediment(self) -> None:
-        QMessageBox.information(self, "Project file", "Not implemented yet")
+        def Close():
+            if self.layout().itemAt(0):
+                self.layout().itemAt(0).widget().deleteLater()
+            return
+
+        form_search = QWidget()
+
+        layout = QGridLayout(form_search)
+        layout.setContentsMargins(10,0,10,0)
+        layout.setSpacing(20)
+
+        search_term = QLineEdit()
+        search_term.setPlaceholderText("Enter a search term")
+        layout.addWidget(search_term, 0, 0)
+
+        btn_search = QPushButton('Go')
+        btn_search.clicked.connect(self.OpenSediment)
+        layout.addWidget(btn_search, 0, 1)
+
+        btn_close = QPushButton('Close')
+        btn_close.clicked.connect(Close)
+        layout.addWidget(btn_close, 1, 0)
+
+        form_search.setLayout(layout)
+        self.setWidget(form_search)
+        self.iface.messageBar().pushMessage("New sediment netCDF file")
         return
 
     def OpenSediment(self) -> None:
@@ -322,8 +382,11 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def GetCellIJ(self):
-        QMessageBox.information(self, "Project file", "Not implemented yet")
-        return
+        #QMessageBox.information(self, "Project file", "Not implemented yet")
+        #return
+        self.iface.messageBar().pushMessage("Mouse tracking activated")
+        canvas = self.iface.mapCanvas()
+        canvas.setMapTool(self.pointTool)
 
     def ImportMarsResults(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")

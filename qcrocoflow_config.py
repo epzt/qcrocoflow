@@ -23,7 +23,10 @@
 
 from datetime import datetime, timezone
 
+# Seconds since 01-01-1900
 DELTASECONDSREFS = datetime(1900,1,1,tzinfo=timezone.utc).timestamp()
-
+# Default geodetic system of CROCO netCDF files
 EPSGWGS84 = "EPSG:4326"
+# Lower limit of ratio for sequenceMatcher function of difflib
+DEFAULTRATIO = 0.6
 

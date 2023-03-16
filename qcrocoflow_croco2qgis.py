@@ -47,10 +47,13 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
         self.innetCDFFileName = None
         self.currentDirectory = currentDir
         self.dVars = dict()
+        self.dCoords = dict()
 
         self.innetCDFFileNameButton.clicked.connect(self.SelectNetCDFInFile)
         self.innetCDFStartDateDate.dateTimeChanged.connect(self.StartDateTimeChanged)
         self.innetCDFEndDateDate.dateTimeChanged.connect(self.EndDateTimeChanged)
+        self.lonVariableNameComboBox.currentTextChanged.connect(self.LongitudeVariableCoordsChanged)
+        self.latVariableNameComboBox.currentTextChanged.connect(self.LatitudeVariableCoordsChanged)
 
     def GetVariablesWithDim(self, _dataset, _dim) -> list:
     # Return a list of variables width _dim dimensions """
@@ -60,18 +63,18 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
                 retList.append(v)
         return retList
 
-    def IsVariablesWithTime(self, _var, _dimtimename) -> list:
+    #def IsVariablesWithTime(self, _var, _dimtimename) -> list:
     # Return True or False if _var has _dimtimename in its dimensions """
-        return _dimtimename in _var.dimensions
+    #    return _dimtimename in _var.dimensions
 
-    def IsTimeDimension(self, _dataset, _ratio=0.6) -> tuple:
+    def IsExistingDimension(self, _dataset, _dim, _ratio=DEFAULTRATIO) -> tuple:
     # Search for time dimmension in the netCDF file """
         dims = [d for d in _dataset.dimensions]
         maxMatch = 0.0
         bestdName = None
         dSize = 0
-        for id, dname in enumerate(dims):
-            match = difflib.SequenceMatcher(None, dname, 'time')
+        for _, dname in enumerate(dims):
+            match = difflib.SequenceMatcher(None, dname, _dim)
             ratio = match.ratio()
             if ratio > maxMatch and ratio > _ratio:
                 maxMatch = ratio
@@ -103,8 +106,18 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
                 else:
                     self.DeleteLayout(item.layout())
 
-    def UpdateVariablesComboBox(self, _ldicts: dict) -> None:
-    # Create combobox and fill them according variable lists"""
+    def UpdateVariablesComboBox(self, _ldicts: list) -> None:
+    # Create combobox and fill them according variable lists
+        # Fill the coordinates comboboxes with 2D variables
+        self.lonVariableNameComboBox.addItems(_ldicts[0]["vars"])
+        self.lonVariableNameComboBox.setCurrentIndex(self.lonVariableNameComboBox.findText('lon_rho'))
+        self.latVariableNameComboBox.addItems(_ldicts[0]["vars"])
+        self.latVariableNameComboBox.setCurrentIndex(self.latVariableNameComboBox.findText('lat_rho'))
+        if self.latVariableNameComboBox.findText('lat_rho') < 0 or self.lonVariableNameComboBox.findText('lon_rho') < 0:
+            QMessageBox.information(self, "Coordinates warning", "Select proper coordinate variables.")
+        else:
+            self.dCoords['lat'] = "lat_rho" # Default values for coordinates
+            self.dCoords['lon'] = "lon_rho"
         # Delete eventually previous comboboxes
         self.DeleteLayout(self.variablesGroupBox.layout())
         if self.variablesGroupBox.layout() is not None:
@@ -125,6 +138,12 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
         self.variablesGroupBox.setLayout(gbox)
         return
 
+    def LongitudeVariableCoordsChanged(self, _str: str) -> None:
+    # Create/update the dictionary of coordinates selected
+        self.dCoords["lon"] = _str
+    def LatitudeVariableCoordsChanged(self, _str: str) -> None:
+    # Create/update the dictionary of coordinates selected
+        self.dCoords["lat"] = _str
     def VariableChanged(self, _str: str) -> None:
     # Create/update the dictionary of variables selected for each dimension of the netcdf file
         self.dVars[self.sender().accessibleName()] = _str
@@ -149,9 +168,9 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
             dataset = nc.Dataset(_file, 'r')
         except:
             QMessageBox.warning(self, "Error", f"Can not open/access file {self.innetCDFFileName}")
-            return
+            return []
         # look if a time variable is present in the netCDF dataset
-        present, tName, nbrTimeSteps = self.IsTimeDimension(dataset)
+        present, tName, nbrTimeSteps = self.IsExistingDimension(dataset, 'time')
         if present:
             minTime = np.nanmin(dataset[tName][:])
             maxTime = np.nanmax(dataset[tName][:])
@@ -203,5 +222,8 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
         else:
             return ""
 
-    def GetDictOfVars(self) -> tuple:
+    def GetDictOfVars(self) -> dict:
         return self.dVars
+
+    def GetDictOfCoords(self) -> dict:
+        return self.dCoords
