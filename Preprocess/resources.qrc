@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/croco_grid" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
