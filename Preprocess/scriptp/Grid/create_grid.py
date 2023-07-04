@@ -2,13 +2,34 @@ import netCDF4 as nc
 import numpy as np
 from datetime import datetime
 import os
+
 def create_grid_file(L, M, grdname, title, directory):
+    """
+    This function creates a CROCO grid file with dimensions and variables.
+
+    Parameters:
+    L: int
+        The size in the XI-direction.
+    M: int
+        The size in the ETA-direction.
+    grdname: str
+        The name of the grid file.
+    title: str
+        The title of the grid.
+    directory: str
+        The directory to save the grid file.
+
+    Returns:
+    grdname_full_path: str
+        The full path of the grid file.
+    """
+
     Lp = L + 1
     Mp = M + 1
-    
+
     # Création du chemin complet pour le fichier
     grdname_full_path = os.path.join(directory, grdname)
-    nw = nc.Dataset(grdname, 'w', format='NETCDF4')
+    nw = nc.Dataset(grdname_full_path, 'w', format='NETCDF4')
 
     # Create dimensions
     nw.createDimension('xi_u', L)
@@ -36,7 +57,7 @@ def create_grid_file(L, M, grdname, title, directory):
     depthmin = create_ncvar('depthmin', 'one', 'Shallow bathymetry clipping depth', 'meter')
     depthmax = create_ncvar('depthmax', 'one', 'Deep bathymetry clipping depth', 'meter')
 
-    spherical = nw.createVariable('spherical', str, 'one')
+    spherical = nw.createVariable('spherical', 'c', 'one')
     spherical.long_name = 'Grid type logical switch'
     spherical.option_T = 'spherical'
 
@@ -144,3 +165,4 @@ def create_grid_file(L, M, grdname, title, directory):
     nw.type = 'CROCO grid file'
 
     nw.close()
+    return grdname_full_path
