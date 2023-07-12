@@ -98,6 +98,7 @@ class BathyView(QDialog, FORM_CLASS):
             qimage = QImage(data, width, height, QImage.Format_RGBA8888)
             pixmap = QPixmap(qimage)
 
+
             # Display the image in a QGraphicsScene
             scene = QGraphicsScene()
             item = QGraphicsPixmapItem(pixmap)
