@@ -123,6 +123,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         settings = QgsSettings()
         settings.setValue("/topography_files", self.topography_files)
 
+
     def update_topography_combobox(self):
         # Try to disconnect the signal
         try:
@@ -131,6 +132,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
             pass
         # Update the combobox
         self.selecttopoComboBox.clear()
+        self.selecttopoComboBox.addItem("")  # Add an empty item at the start
         self.selecttopoComboBox.addItems(self.topography_files)
         # Reconnect the signal
         self.selecttopoComboBox.currentIndexChanged.connect(self.select_bathymetry_file_from_combobox)
@@ -286,6 +288,8 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     ###############################################################################################
     #                                Select TOPOFILES                                             #
     ###############################################################################################
+
+
     def load_topography_file(self, file_name):
         """
         This function loads a topography file into the project and adds a message
@@ -308,7 +312,18 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
                     if not layer.isValid():
                         print("Layer failed to load!")
                     else:
-                        QgsProject.instance().addMapLayer(layer)
+                        # Check CRS
+                        if not layer.crs().authid():
+                            layer.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))  # Set the CRS to WGS84
+                            msg = QMessageBox()
+                            msg.setIcon(QMessageBox.Warning)
+                            msg.setText(
+                                "CRS not detected, automatically set to WGS84 (EPSG:4326). Please verify this is correct.")
+                            msg.setWindowTitle("CRS not detected")
+                            msg.exec_()
+
+                    # Add the layer regardless of its validity or CRS
+                    QgsProject.instance().addMapLayer(layer)
 
     # ------------------------------------------------------------------#
 
@@ -822,7 +837,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
                 INSERT OR REPLACE INTO Grid 
                 (title, directory, grdname, dl, topo, lat_min, lat_max, lon_min, lon_max)
                 VALUES 
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
 
         query.prepare(sql)
@@ -830,7 +845,6 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         query.addBindValue(directory)
         query.addBindValue(grdname)
         query.addBindValue(dl)
-
         query.addBindValue(topo)
         query.addBindValue(lat_min)
         query.addBindValue(lat_max)
@@ -865,14 +879,12 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     # Open project
     ##################
     def load_projects(self):
-        # Execute a request for get all titles of projects pour obtenir tous les titres de projets
+        # Execute a request for get all titles of projects
         query = QSqlQuery(self.db)
         query.exec_("SELECT title FROM Grid")
-
         # clear ComboBox
         self.opengridprojectComboBox.clear()
         self.opengridprojectComboBox.addItem("")
-
         # Add each title to the ComboBox
         while query.next():
             primary_key = query.value(0)
@@ -889,10 +901,10 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         query.exec_()
 
         if query.next():
-            directory = query.value(1)
-            grdname = query.value(2)
-            dl = query.value(3)
-
+            title = query.value(1)
+            directory = query.value(2)
+            grdname = query.value(3)
+            dl = query.value(4)
             topo = query.value(5)
             lat_min = query.value(6)
             lat_max = query.value(7)
@@ -904,7 +916,6 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
             self.gridprojecttitleLineEdit.setText(selected_title)
             self.gridnameLineEdit.setText(grdname)
             self.dlDoubleSpin.setValue(float(dl))
-
             self.topodirLineEdit.setText(topo)
             self.latminLineEdit.setText(str(lat_min))
             self.latmaxLineEdit.setText(str(lat_max))
