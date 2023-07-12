@@ -110,12 +110,12 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
     # Create combobox and fill them according variable lists
         # Fill the coordinates comboboxes with 2D variables
         self.lonVariableNameComboBox.addItems(_ldicts[0]["vars"])
-        self.lonVariableNameComboBox.setCurrentIndex(self.lonVariableNameComboBox.findText('lon_rho'))
         self.latVariableNameComboBox.addItems(_ldicts[0]["vars"])
-        self.latVariableNameComboBox.setCurrentIndex(self.latVariableNameComboBox.findText('lat_rho'))
         if self.latVariableNameComboBox.findText('lat_rho') < 0 or self.lonVariableNameComboBox.findText('lon_rho') < 0:
             QMessageBox.information(self, "Coordinates warning", "Select proper coordinate variables.")
         else:
+            self.lonVariableNameComboBox.setCurrentIndex(self.lonVariableNameComboBox.findText('lon_rho'))
+            self.latVariableNameComboBox.setCurrentIndex(self.latVariableNameComboBox.findText('lat_rho'))
             self.dCoords['lat'] = "lat_rho" # Default values for coordinates
             self.dCoords['lon'] = "lon_rho"
         # Delete eventually previous comboboxes

@@ -6,15 +6,30 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>232</width>
-    <height>141</height>
+    <width>1000</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>QCrocoFlow</string>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
-   <layout class="QGridLayout" name="gridLayout"/>
+   <widget class="QTextEdit" name="messagelogTextEdit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>5</y>
+      <width>350</width>
+      <height>261</height>
+     </rect>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>350</width>
+      <height>16777215</height>
+     </size>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>
