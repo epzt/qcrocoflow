@@ -54,12 +54,15 @@ from qgis.PyQt.QtWidgets import (
     QWidget,
     QLineEdit,
     QPushButton)
+from PyQt5.QtWidgets import QInputDialog
 
 import netCDF4 as nc
+import datetime
 
 from .qcrocoflow_croco2qgis import qcrocoflowCROCO2QGIS
 from .qcrocoflow_qcrocotools import netCDFtoRaster
 from .qcrocoflow_config import *
+from .Preprocess.qcrocoflow_crocogrid_dialog import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_dockwidget_base.ui'))
@@ -79,6 +82,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Get pointer on QGIS interface
         self.iface  = _iface
+        self.grdDlg = None
         # Construction of menu bar entries and relative actions
         self.myQMenuBar = QMenuBar(self)
         ### Project ################################
@@ -117,9 +121,13 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         newGridAction.triggered.connect(self.NewGrid)
         gridMenu.addAction(newGridAction)
         # ---
-        openGridAction = QAction('Import...', self)
-        openGridAction.triggered.connect(self.ImportGrid)
+        openGridAction = QAction('Open...', self)
+        openGridAction.triggered.connect(self.OpenGrid)
         gridMenu.addAction(openGridAction)
+        # ---
+        importGridAction = QAction('Import NetCDF...', self)
+        importGridAction.triggered.connect(self.ImportNetCDFGrid)
+        gridMenu.addAction(importGridAction)
         # ---
         gridMenu.addSeparator()
         # ---
@@ -264,9 +272,69 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         return
     def NewGrid(self) -> None:
     # Creation of a new grid
-        QMessageBox.information(self, "Project file", "Not implemented yet")
+        self.grdDlg = qcrocoflow_crocogridDialog(self.iface, parent=self)
+        self.grdDlg.show()
         return
-    def ImportGrid(self) -> None:
+
+    def OpenGrid(self) -> None:
+        # Define the database
+        script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
+        db_path = os.path.join(script_dir, "project", "Grid.db")  # Get the path of the database relative to the script
+        QMessageBox.information(self, "Database Path", "The database path is: " + db_path)
+        db = QSqlDatabase.addDatabase('QSQLITE')
+        db.setDatabaseName(db_path)
+        if not db.open():
+            QMessageBox.critical(self, "Database Error", db.lastError().text())
+            return
+
+        query = QSqlQuery(db)
+        query.exec_(
+            "SELECT title FROM Grid")  #
+
+        # Récupérez les résultats de la requête
+        items = []
+        while query.next():
+            items.append(query.value(0))
+
+        item, ok = QInputDialog.getItem(self, "Open an project", "Select an project:", items, 0, False)
+        if ok and item:
+            # Requête pour obtenir les détails du projet sélectionné
+            query = QSqlQuery(db)
+            query.prepare("SELECT * FROM Grid WHERE title = ?")
+            query.addBindValue(item)
+            query.exec_()
+            if query.next():
+                # Récupérez les valeurs de la base de données
+                directory = query.value(1)
+                grdname = query.value(2)
+                dl = query.value(3)
+                hmin = query.value(4)
+                topo = query.value(5)
+                lat_min = query.value(6)
+                lat_max = query.value(7)
+                lon_min = query.value(8)
+                lon_max = query.value(9)
+
+                # Open grid dialog
+                self.grdDlg = qcrocoflow_crocogridDialog(self.iface, parent=self)
+                self.grdDlg.show()
+
+                # Mettez à jour les variables
+                self.grdDlg.Environnement_2.setText(directory)
+                self.grdDlg.gridprojecttitleLineEdit.setText(item)
+                self.grdDlg.gridnameLineEdit.setText(grdname)
+                self.grdDlg.dlDoubleSpin.setValue(float(dl))
+                self.grdDlg.hminSpinBox.setValue(hmin)
+                self.grdDlg.topodirLineEdit.setText(topo)
+                self.grdDlg.latminLineEdit.setText(str(lat_min))
+                self.grdDlg.latmaxLineEdit.setText(str(lat_max))
+                self.grdDlg.lonminLineEdit.setText(str(lon_min))
+                self.grdDlg.lonmaxLineEdit.setText(str(lon_max))
+            else:
+                QMessageBox.warning(self, "No Data", "No data found for the selected project.")
+
+
+    def ImportNetCDFGrid(self) -> None:
     # Import variables from a netCDF file to create raster or vector layers in QGIS
         openGridDlg = qcrocoflowCROCO2QGIS(self.currentWorkingDIrectory, self)
         if openGridDlg.exec():
@@ -391,3 +459,9 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def ImportMarsResults(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")
         return
+
+    def add_message(self, message, color='black'):
+        now = datetime.now()
+        timestamp = now.strftime("%H:%M:%S")
+        colored_message = f"<font color='{color}'>{timestamp}: {message}</font>"
+        self.messagelogTextEdit.append(colored_message)
