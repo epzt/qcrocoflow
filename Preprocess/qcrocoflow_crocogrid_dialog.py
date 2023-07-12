@@ -45,10 +45,10 @@ from PyQt5.QtGui import QDesktopServices
 # PyQt5 modules for creating a dialog and push buttons
 from PyQt5.QtWidgets import QDialog, QPushButton
 # Local modules for creating a grid, making bulk and tides files for croco
-from Preprocess.Grid.make_grid import make_grid_function
-from Preprocess.Bulk.ERA5_request import ERA5_request_script
-from Preprocess.Tides.make_tides import make_tides_script
-from Preprocess.Bulk.make_bulk import *
+from .Grid.make_grid import make_grid_function
+from .Bulk.ERA5_request import ERA5_request_script
+from .Tides.make_tides import make_tides_script
+from .Bulk.make_bulk import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_crocogrid_dialog_base.ui'))

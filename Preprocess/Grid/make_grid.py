@@ -18,7 +18,7 @@ from .bathy_view import BathyView
 from .add_topo_from_raster import add_topo_file2
 from .create_grid import create_grid_file
 from .add_topo_fromNC import add_topo_file
-from qcrocoflow_qcrocotools import netCDFtoRaster
+from ...qcrocoflow_qcrocotools import netCDFtoRaster
 from .get_rho_script import get_rho
 from .uvp_mask import uvp_mask_file
 from .get_angle import get_angle_file
