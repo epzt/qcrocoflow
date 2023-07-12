@@ -23,31 +23,26 @@
 """
 
 import os
-import sqlite3
 from datetime import datetime
 
 import numpy as np
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from PyQt5.QtWidgets import QComboBox, QDialog, QFileDialog, QMessageBox, QLabel, QVBoxLayout
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QVBoxLayout
 from qgis.core import (QgsCoordinateReferenceSystem, QgsFeature, QgsGeometry,
-                       QgsMapLayer, QgsPointXY, QgsProject, QgsRectangle,
-                       QgsVectorLayer, QgsProject, QgsRasterLayer, QgsCoordinateTransform, QgsVectorLayer, QgsFillSymbol, QgsSingleSymbolRenderer, QgsSettings)
+                       QgsPointXY, QgsRectangle,
+                       QgsProject, QgsRasterLayer, QgsCoordinateTransform, QgsVectorLayer, QgsFillSymbol, QgsSingleSymbolRenderer, QgsSettings)
 
-from qgis.gui import QgsMapToolEmitPoint, QgsMapToolExtent, QgsRubberBand
-from qgis.utils import iface
+from qgis.gui import QgsMapToolExtent
 from PyQt5 import uic
 from PyQt5.QtCore import QDate, Qt, QUrl
 
-from PyQt5.QtGui import QDesktopServices, QDesktopServices
+from PyQt5.QtGui import QDesktopServices
 
-from PyQt5.QtWidgets import QDialog, QPushButton, QTextEdit
+from PyQt5.QtWidgets import QDialog, QPushButton
 
-from .qcrocoflow_cocogrid_dialog_base import Ui_qcrocoflow_crocogridDialogBase
-from .scriptp.make_grid import make_grid_function
-from .scriptp.Bulk.ERA5_request import ERA5_request_script
-from .scriptp.Tides.make_tides import make_tides_script
-
-from PyQt5.QtWidgets import QProgressBar
+from .Grid.make_grid import make_grid_function
+from .Bulk.ERA5_request import ERA5_request_script
+from.Tides.make_tides import make_tides_script
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_crocogrid_dialog_base.ui'))

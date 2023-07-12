@@ -8,7 +8,7 @@ from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
 from PyQt5.QtCore import Qt
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), './qcrocoflow_Bathyview.ui'))
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'qcrocoflow_Bathyview.ui'))
 
 class BathyView(QDialog, FORM_CLASS):
     def __init__(self, parent=None):
