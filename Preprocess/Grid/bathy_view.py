@@ -89,11 +89,13 @@ class BathyView(QDialog, FORM_CLASS):
             im = ax.imshow(self.h, origin='lower', cmap=cmap, norm=norm)
             fig.colorbar(im)
 
+
             # Render the image
             canvas.draw()
-            width, height = fig.get_size_inches() * fig.get_dpi()
+            width, height = map(int, fig.get_size_inches() * fig.get_dpi())  # Convertir en entiers
             buf = canvas.buffer_rgba()
-            qimage = QImage(buf, width, height, QImage.Format_RGBA8888)
+            data = buf.tobytes()  # Convertir en bytes
+            qimage = QImage(data, width, height, QImage.Format_RGBA8888)
             pixmap = QPixmap(qimage)
 
             # Display the image in a QGraphicsScene

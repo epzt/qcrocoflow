@@ -8,8 +8,8 @@
                              -------------------
         begin                : 2023-05-03
         git sha              : $Format:%H$
-        copyright            : (C) 2023 by john nejmann
-        email                : @
+        copyright            : (C) 2023 by Jonathan nejmann
+        email                : jonathan.nejmann@hotmail.fr
  ***************************************************************************/
 
 /***************************************************************************
@@ -22,37 +22,44 @@
  ***************************************************************************/
 """
 
-import os
+# Built-in module
 from datetime import datetime
-
 import numpy as np
+
+# PyQt5 modules for interacting with a SQLite database
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
+# PyQt5 modules for creating a file dialog, a message box, labels, and box layouts
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QVBoxLayout
+# QGIS core modules for working with coordinate reference systems, geographic features, geometric shapes, points, rectangles,
+# geographic projects, raster layers, coordinate transformations, vector layers, fill symbols, and single symbol renderers
 from qgis.core import (QgsCoordinateReferenceSystem, QgsFeature, QgsGeometry,
                        QgsPointXY, QgsRectangle,
                        QgsProject, QgsRasterLayer, QgsCoordinateTransform, QgsVectorLayer, QgsFillSymbol, QgsSingleSymbolRenderer, QgsSettings)
-
+# QGIS module for creating a map tool that allows the user to select a rectangular area on the map
 from qgis.gui import QgsMapToolExtent
+# PyQt5 module for working with Qt's user interface compiler
 from PyQt5 import uic
+# PyQt5 modules for working with dates, URL, and desktop services
 from PyQt5.QtCore import QDate, Qt, QUrl
-
 from PyQt5.QtGui import QDesktopServices
-
+# PyQt5 modules for creating a dialog and push buttons
 from PyQt5.QtWidgets import QDialog, QPushButton
-
+# Local modules for creating a grid, making bulk and tides files for croco
 from .Grid.make_grid import make_grid_function
 from .Bulk.ERA5_request import ERA5_request_script
-from.Tides.make_tides import make_tides_script
+from .Tides.make_tides import make_tides_script
+from .Bulk.make_bulk import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_crocogrid_dialog_base.ui'))
 
 
 class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
-
+#"class"
     def __init__(self, iface, parent=None):
         """Constructor."""
         super(qcrocoflow_crocogridDialog, self).__init__(parent)
+        self.era5_path = None
         self.directory = ""
         self.iface = iface
         self.parent = parent
@@ -61,7 +68,6 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.load_TPXO_path()
         self.Environnement_2.setToolTip("Bonjour")
         self.connect_signals_and_slots()
-        self.tabWidget.setCurrentIndex(2)
         #init Grid
         self.titre = ""
         self.grid_layer = None
@@ -70,7 +76,6 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.dlDoubleSpin.setValue(0.0)
         self.dl = 0.0
         self.ddButton.setChecked(True)
-
         #initdate
         self.date_min = QDate()
         self.date_max = QDate()
@@ -80,7 +85,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.Ymin = None
         self.Mmin = None
         self.Dmin = None
-        #init Tides
+        #initTides
         self.ROMSnames = self.create_ROMSnames_list()
         self.m2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
         self.n2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
@@ -107,18 +112,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.load_projects()
         self.selecttopoComboBox.currentIndexChanged.connect(self.select_bathymetry_file_from_combobox)
 
-    def load_TPXO_path(self):
-        settings = QgsSettings()
-        self.TPXO_path = settings.value("/TPXO_path", "")
-        if self.TPXO_path:
-            self.tpxoStatusLabel.setText(f"TPXO file loaded: {self.TPXO_path}")
-            self.tpxoStatusLabel.setStyleSheet("color: green")
-        else:
-            self.tpxoStatusLabel.setText("No TPXO file loaded")
-            self.tpxoStatusLabel.setStyleSheet("color: orange")
-
     #BATHYMETRIE
-
     def load_topography_files(self):
         settings = QgsSettings()
         files = settings.value("/topography_files", [])
@@ -135,23 +129,15 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
             self.selecttopoComboBox.currentIndexChanged.disconnect()
         except TypeError:
             pass
-
         # Update the combobox
         self.selecttopoComboBox.clear()
         self.selecttopoComboBox.addItems(self.topography_files)
-
         # Reconnect the signal
         self.selecttopoComboBox.currentIndexChanged.connect(self.select_bathymetry_file_from_combobox)
 
-        # Set up the user interface from Designer through FORM_CLASS.
-        # After self.setupUi() you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
-
-    ###################
-    # connect boutons #
-    ###################
+    ###############################################################################################
+    #                            CONNECT BUTTON TO FONCTION                                           #
+    ###############################################################################################
 
     def connect_signals_and_slots(self):
         self.selectenvButton.clicked.connect(self.select_work_environment_directory)
@@ -177,42 +163,82 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         #Bulk
         self.ERA5pushButton.clicked.connect(self.open_era5_window)
         self.ERA5dwlButton.clicked.connect(self.run_era5_script)
+        self.BulkexecuteButton.clicked.connect(self.on_execute_Bulk)
+        self.selectERA5Button.clicked.connect(self.select_ERA5_file)
         #tides
         self.TPXO9pushButton.clicked.connect(self.open_TPXO9_window)
         self.TidesexecuteButton.clicked.connect(self.on_execute_Tides)
         self.selectTPXO9Button.clicked.connect(self.select_tpxo_file)
 
+    def load_TPXO_path(self):
+        """
+         This function is responsible for loading the path of the TPXO file from the QGIS settings.
+         If the TPXO file path is found, it updates the label.
+        """
+        settings = QgsSettings()
+        self.TPXO_path = settings.value("/TPXO_path", "")
+        # If a TPXO path is found
+        if self.TPXO_path:
+            # Update label with the path and set the color to green
+            self.tpxoStatusLabel.setText(f"TPXO file loaded: {self.TPXO_path}")
+            self.tpxoStatusLabel.setStyleSheet("color: green")
+        else:
+            # Update label with a no-file-loaded message and set the color to orange
+            self.tpxoStatusLabel.setText("No TPXO file loaded")
+            self.tpxoStatusLabel.setStyleSheet("color: orange")
+
+    #INFORMATIONS ABOUT ERA5 Button
     def open_era5_link(self):
+        """
+        This function opens a link to the ERA5 API documentation in the default web browser.
+        """
         link = QUrl("https://cds.climate.copernicus.eu/api-how-to")
         QDesktopServices.openUrl(link)
 
+    # INFORMATION ABOUT TPXO9 Button
     def open_TPXO9_link(self):
+        """
+        This function opens a link to the TPXO9 products and registration page in the default web browser.
+        """
         link = QUrl("https://www.tpxo.net/tpxo-products-and-registration")
         QDesktopServices.openUrl(link)
 
-    ############
-    # Workplace#
-    ############
+    ###############################################################################################
+    #                           DEFINE WORKPLACE                                              #
+    ###############################################################################################
 
     def select_work_environment_directory(self):
+        """
+        Function to open a dialog to select a directory for the working environment.
+        """
         directory = QFileDialog.getExistingDirectory(self, "Select Environment Directory")
+        # If a directory is selected
         if directory:
+            # Update label with the directory
             self.Environnement_2.setText(directory)
+            # Save the directory
             self.directory = directory
+            # Add a message to the parent console
             self.parent.add_message("Le chemin d'accès est : " + directory, color='blue')
 
-    ########
-    # Title#
-    ########
+    ###############################################################################################
+    #                            SELECT TITLE PROJECT                                           #
+    ###############################################################################################
 
     def on_gridprojecttitle_text_changed(self, text):
+        """
+        Function to update 'titre' when the text in the 'gridprojecttitle' text box changes.
+        """
         self.titre = text
 
-    #############
-    # Grid name#
-    #############
+    ###############################################################################################
+    #                              Grid Name                                                      #
+    ###############################################################################################
 
     def on_gridname_text_changed(self, text):
+        """
+        Function to ensure the 'grdname' ends with '.nc' when the text in the 'gridname' text box changes
+        """
         if not text.endswith('.nc'):
             text += '.nc'
         self.grdname = text
@@ -222,11 +248,17 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     ###############################################################################################
 
     def on_dl_b_text_changed(self):
+        """
+        Function to convert the text in the 'dlDoubleSpin' text box to a float when it changes
+        """
         text = self.dlDoubleSpin.text()
         try:
+            # Convert the text to a float
             self.dl = float(text)
+            # Update the grid
             self.update_grid()
         except ValueError:
+            # If the text can't be converted to a float, set 'dl' to 0.0 and display a warning
             self.dl = 0.0
             self.parent.add_message("Warning! the resolution of the grid must be greater than 0.", color='red')
 
@@ -234,9 +266,14 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     #                                          Dates                                              #
     ###############################################################################################
     def on_date_changed(self):
+        """
+        Function to extract the year, month, and day from the selected dates when they change.
+        """
+        # Get the selected dates
         self.date_min = self.datestart.date()
         self.date_max = self.dateend.date()
 
+        # Extract the year, month, and day from each date
         self.Ymin = self.date_min.year()
         self.Mmin = self.date_min.month()
         self.Dmin = self.date_min.day()
@@ -249,8 +286,13 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     ###############################################################################################
     #                                Select TOPOFILES                                             #
     ###############################################################################################
-
     def load_topography_file(self, file_name):
+        """
+        This function loads a topography file into the project and adds a message
+        to the parent console. The file name is displayed in the 'topodirLineEdit'
+        text box. The file is only loaded if it is not already in the project and
+        its extension is either 'grd' or 'tif'.
+        """
         if file_name:
             self.topodirLineEdit.setText(file_name)
             self.topo = file_name
@@ -268,8 +310,14 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
                     else:
                         QgsProject.instance().addMapLayer(layer)
 
+    # ------------------------------------------------------------------#
 
     def select_topography_file(self):
+        """
+        This function opens a file dialog to select a topography file.
+        The selected file is then loaded into the project and added to
+        the list of topography files if it is not already in the list.
+        """
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly
         file_filter = "Topography files (*.nc *.tif *.grd);;All files (*)"
@@ -285,77 +333,114 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
                 self.save_topography_files()
                 self.update_topography_combobox()
 
+    # ------------------------------------------------------------------#
+
     def select_bathymetry_file_from_combobox(self):
+        """
+        This function loads a topography file selected from the 'selecttopoComboBox'
+        into the project.
+        """
         file_name = self.selecttopoComboBox.currentText()
 
         if file_name:
             self.load_topography_file(file_name)
+
     ###############################################################################################
     #                          Select zone                                                        #
     ###############################################################################################
     def select_zone(self):
+        """
+        This function sets a map tool for the canvas that allows the user to
+        select a rectangular area on the map. Once an area is selected,
+        it connects to the 'on_extent_changed' slot to handle the new selection.
+        """
+        # Instantiate a new map tool that lets the user draw a rectangle on the map
         self.map_tool = QgsMapToolExtent(self.iface.mapCanvas())
+        # Set the map tool on the canvas
         self.iface.mapCanvas().setMapTool(self.map_tool)
+        # Connect the extentChanged signal to the 'on_extent_changed' slot
         self.map_tool.extentChanged.connect(self.on_extent_changed)
 
     # ------------------------------------------------------------------#
+
     def on_extent_changed(self, extent):
+        """
+        This function is a slot that gets called when the user draws a new rectangle
+        on the map. It transforms the coordinates of the rectangle to EPSG:4326
+        (WGS84) and updates the text fields in the UI with these values.
+        """
+        # Save the selected extent
         self.selected_extent = extent
         # Define a coordinate transform that will transform coordinates from the project CRS to EPSG:4326 (WGS84)
         transform_4326 = QgsCoordinateTransform(QgsProject.instance().crs(), QgsCoordinateReferenceSystem('EPSG:4326'),
                                                 QgsProject.instance())
         # Transform the extent to EPSG:4326
         extent = transform_4326.transformBoundingBox(extent)
+        # Get the minimum and maximum longitude and latitude values
         lon_min = extent.xMinimum()
         lon_max = extent.xMaximum()
         lat_min = extent.yMinimum()
         lat_max = extent.yMaximum()
+        # Update the text fields in the UI with the new coordinates
         self.lonminLineEdit.setText(str(lon_min))
         self.lonmaxLineEdit.setText(str(lon_max))
         self.latminLineEdit.setText(str(lat_min))
         self.latmaxLineEdit.setText(str(lat_max))
-        # Define a coordinate transform that will transform coordinates from EPSG:4326 (WGS84)
+        # Define a coordinate transform that will transform coordinates from EPSG:4326 (WGS84) to the project CRS
         transform_project_crs = QgsCoordinateTransform(QgsCoordinateReferenceSystem('EPSG:4326'),
                                                        QgsCoordinateReferenceSystem('EPSG:3857'),
                                                        QgsProject.instance())
-
         # Transform the coordinates back to the project CRS
         lon_min, lat_min = transform_project_crs.transform(
             QgsPointXY(lon_min, lat_min)).x(), transform_project_crs.transform(QgsPointXY(lon_min, lat_min)).y()
         lon_max, lat_max = transform_project_crs.transform(
             QgsPointXY(lon_max, lat_max)).x(), transform_project_crs.transform(QgsPointXY(lon_max, lat_max)).y()
-        #transformed
+        # Save the transformed coordinates for later use
         self.lon_min = lon_min
         self.lon_max = lon_max
         self.lat_min = lat_min
         self.lat_max = lat_max
         # Store these values in the selected_extent for grid creation
         self.selected_extent = QgsRectangle(lon_min, lat_min, lon_max, lat_max)
+        # Call the 'create_grid' function to create a new grid with the selected extent
         self.create_grid()
 
     # ------------------------------------------------------------------#
     def create_grid(self):
+        """
+        This function creates a grid based on the selected extent and resolution.
+        If a grid already exists, it removes it before creating a new one.
+        If no extent is selected or the resolution is not positive, it does not
+        create a grid.
+        """
         # If a grid layer already exists, remove it from the map
         if self.grid_layer is not None:
             QgsProject.instance().removeMapLayer(self.grid_layer.id())
             self.grid_layer = None
-
-        # Ensure there is a selected extent
+        # Ensure there is a selected extent and the resolution is positive
         if self.selected_extent is None or self.dl <= 0:
             if self.dl <= 0:
-                self.parent.add_message("Warning! the resolution of the grid must be greater than 0.", color='red')
+                self.parent.add_message("Warning! The resolution of the grid must be greater than 0.", color='red')
             return
-
+        # Get the minimum and maximum latitude and longitude values of the selected extent
         lat_min = self.selected_extent.yMinimum()
         lat_max = self.selected_extent.yMaximum() + self.dl
         lon_min = self.selected_extent.xMinimum()
         lon_max = self.selected_extent.xMaximum() + self.dl
+        # Create arrays of latitude and longitude values for the grid
         latitudes = np.arange(lat_min, lat_max, self.dl)
         longitudes = np.arange(lon_min, lon_max, self.dl)
+        # Call the 'add_grid_to_map' function to add the grid to the map
         self.add_grid_to_map(latitudes, longitudes)
 
     # ------------------------------------------------------------------#
+
     def add_grid_to_map(self, latitudes, longitudes):
+        """
+        This function creates a grid layer and adds it to the map. The grid is made
+        up of polygons representing each cell of the grid. The polygons are transparent
+        with a black border.
+        """
         # Create a memory layer to hold the grid
         grid_layer = QgsVectorLayer("Polygon?crs=epsg:3857", "grid", "memory")
         # Create a new simple fill symbol
@@ -384,15 +469,18 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         # Commit the changes to the grid layer and update its extents
         grid_layer.commitChanges()
         grid_layer.updateExtents()
-
         # Add the grid layer to the map
         QgsProject.instance().addMapLayer(grid_layer)
-
         # Update self.grid_layer with the new grid
         self.grid_layer = grid_layer
 
     # ------------------------------------------------------------------#
+
     def update_grid(self):
+        """
+        This function updates the grid based on the current text field values.
+        It will not update the grid if any of the text fields do not contain valid floats.
+        """
         try:
             lat_min = float(self.latminLineEdit.text())
             lat_max = float(self.latmaxLineEdit.text())
@@ -422,13 +510,16 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         # Store these values in the selected_extent for grid creation
         self.selected_extent = QgsRectangle(lon_min, lat_min, lon_max, lat_max)
 
+        # Call the 'create_grid' function to create a new grid with the updated extent
         self.create_grid()
 
     ###############################################################################################
     #                            DD/DMS/DM                                                       #
     ###############################################################################################
     def update_coordinates_DD(self):
-        # Update coordinates to Decimal Degrees (DD) format
+        """
+        This function Update coordinates to Decimal Degrees (DD) format.
+        """
         self.lonminLineEdit.setText(str(self.selected_extent.xMinimum()))
         self.lonmaxLineEdit.setText(str(self.selected_extent.xMaximum()))
         self.latminLineEdit.setText(str(self.selected_extent.yMinimum()))
@@ -436,7 +527,9 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
 
     # ------------------------------------------------------------------#
     def update_coordinates_DM(self):
-        # Update coordinates to Degrees and Decimal Minutes (DM) format
+        """
+        Update coordinates to Degrees and Decimal Minutes (DM) format.
+        """
         self.lonminLineEdit.setText(self.deg_to_dm(self.selected_extent.xMinimum()))
         self.lonmaxLineEdit.setText(self.deg_to_dm(self.selected_extent.xMaximum()))
         self.latminLineEdit.setText(self.deg_to_dm(self.selected_extent.yMinimum()))
@@ -444,20 +537,28 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
 
     # ------------------------------------------------------------------#
     def update_coordinates_DMS(self):
-        # Update coordinates to Degrees, Minutes, and Seconds (DMS) format
+        """
+        Update coordinates to Degrees, Minutes, and Seconds (DMS) format.
+        """
         self.lonminLineEdit.setText(self.deg_to_dms(self.selected_extent.xMinimum()))
         self.lonmaxLineEdit.setText(self.deg_to_dms(self.selected_extent.xMaximum()))
         self.latminLineEdit.setText(self.deg_to_dms(self.selected_extent.yMinimum()))
         self.latmaxLineEdit.setText(self.deg_to_dms(self.selected_extent.yMaximum()))
 
     # ------------------------------------------------------------------#
+
     def deg_to_dm(self, deg):
+        """
+        Convert deg to degres minutes.
+        """
         d = int(deg)
         m = abs(deg - d) * 60
         return "{}°{}'".format(d, m)
-
     # ------------------------------------------------------------------#
     def deg_to_dms(self, deg):
+        """
+        Convert deg to degres minutes sec.
+        """
         d = int(deg)
         m_temp = abs(deg - d) * 60
         m = int(m_temp)
@@ -470,30 +571,40 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     ###############################################################################################
 
     def open_TPXO9_window(self):
-        # Créez une nouvelle fenêtre de dialogue
+        """
+        This function creates a dialog window that displays a message informing the user
+        to subscribe to the TPXO9 model by submitting a request. It also provides a link
+        to the website for more information and a button to open the link.
+        """
+        # Create a QDialog object
         TPXO9_window = QDialog(self)
         TPXO9_window.setWindowTitle("ERA5 Window")
 
-        # Créez un widget QLabel pour afficher le message en anglais
+        # Create a QLabel widget to display the message in English
         message_label = QLabel(
             "To use the TPXO9 model, you must subscribe to the model by submitting a request, all the information is available here: <a href='https://www.tpxo.net/tpxo-products-and-registration'>HERE</a>.")
         message_label.setOpenExternalLinks(True)
         message_label.setAlignment(Qt.AlignCenter)
 
-        # Créez un bouton pour ouvrir le lien
+        # Create a button to open the link
         link_button = QPushButton("Open Link")
         link_button.clicked.connect(self.open_TPXO9_link)
 
-        # Créez un layout vertical pour la fenêtre et ajoutez les widgets
+        # Create a vertical layout for the window and add the widgets
         layout = QVBoxLayout(TPXO9_window)
         layout.addWidget(message_label)
         layout.addWidget(link_button)
 
-        # Affichez la fenêtre
+        # Show the window
         TPXO9_window.exec_()
 
     # ------------------------------------------------------------------#
     def select_tpxo_file(self):
+        """
+        This function allows the user to select a directory that contains the TPXO model file.
+        After a directory is selected, the path is saved to QGIS settings, and the status label
+        is updated to show whether the file has been loaded or not.
+        """
         directory_path = QFileDialog.getExistingDirectory(self, "Select directory")
 
         if directory_path:
@@ -512,7 +623,12 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     # ------------------------------------------------------------------#
 
     def create_ROMSnames_list(self):
-        # Create a dictionary mapping harmonic names to their corresponding checkBoxes
+        """
+        This function creates a list of selected harmonics based on the state of the checkboxes
+        in the user interface. It creates a dictionary mapping harmonic names to their corresponding
+        checkboxes, then iterates over this dictionary to check if the checkbox is selected.
+        If it is, the harmonic name is added to a list. The function then returns this list.
+        """
         harmonics_checkBoxes = {
             'm2': self.m2checkBox,
             'n2': self.n2checkBox,
@@ -531,7 +647,6 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
 
         # Create a list to hold the names of selected harmonics
         self.ROMSnames = []
-
         # Iterate over the dictionary
         for harmonic, checkBox in harmonics_checkBoxes.items():
             # If the checkBox is checked, add the harmonic name to the list
@@ -542,13 +657,21 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         return self.ROMSnames
      # ------------------------------------------------------------------#
     def on_checkBox_state_changed(self):
+        """
+        This function is a handler for when the state of the checkboxes changes. It updates the
+        list of selected harmonics by calling the 'create_ROMSnames_list' function.
+        """
         self.ROMSnames = self.create_ROMSnames_list()
 
      # ------------------------------------------------------------------#
 
-
     def on_execute_Tides(self):
-
+        """
+        This function triggers the interpolation of tides based on selected harmonics, simulation
+        length, and other parameters. It retrieves the selected date range, harmonics, grid file
+        path, and TPXO model file path, then calls a separate function 'make_tides_script' to
+        perform the tide calculations.
+        """
         #Init date for tides
         self.date_min = self.datestart.date()
         # Get the year, month, and day from self.date_min
@@ -566,41 +689,45 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         croco_grd = self.grdname_full_path
         TPXO_path = self.TPXO_path
         grdname = self.gridnameLineEdit.text()
-        make_tides_script(TPXO_path, croco_grd, harmoniques, lengthSim, date_min_datetime, grdname)
-
-
-
-
+        directory = self.directory
+        make_tides_script(TPXO_path, croco_grd, harmoniques, lengthSim, date_min_datetime, grdname,directory)
 
     ###############################################################################################
     #                                          BULK                                               #
     ###############################################################################################
+
     def open_era5_window(self):
-        # Créez une nouvelle fenêtre de dialogue
+        """
+        This function creates a dialog window that displays a message informing the user
+        to create an API file to use the ERA5 model. It also provides a link to the website
+        for more information and a button to open the link.
+        """
+        # Create a new dialog window
         era5_window = QDialog(self)
         era5_window.setWindowTitle("ERA5 Window")
-
-        # Créez un widget QLabel pour afficher le message en anglais
+        # Create a QLabel widget to display the message in English
         message_label = QLabel(
             "To use the ERA5 model, you must first create your API file. All the information is available <a href='https://cds.climate.copernicus.eu/api-how-to'>HERE</a>.")
         message_label.setOpenExternalLinks(True)
         message_label.setAlignment(Qt.AlignCenter)
-
-        # Créez un bouton pour ouvrir le lien
+        # Create a button to open the link
         link_button = QPushButton("Open Link")
         link_button.clicked.connect(self.open_era5_link)
-
-        # Créez un layout vertical pour la fenêtre et ajoutez les widgets
+        # Create a vertical layout for the window and add the widgets
         layout = QVBoxLayout(era5_window)
         layout.addWidget(message_label)
         layout.addWidget(link_button)
-
-        # Affichez la fenêtre
+        # Show the window
         era5_window.exec_()
-
     # ------------------------------------------------------------------#
-
     def run_era5_script(self):
+        """
+        This function initiates the execution of the ERA5 request script.
+        It fetches the required parameters such as the directory, title, grid name,
+        latitude and longitude boundaries, and time ranges from the user interface,
+        and calls the 'ERA5_request_script' function with these parameters.
+        """
+        # Fetch the required parameters from the UI
         directory = self.Environnement_2.text()
         title = self.gridprojecttitleLineEdit.text()
         grdname = self.gridnameLineEdit.text() + '.nc'
@@ -612,9 +739,29 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         Ymin = self.Ymin
         Mmax = self.Mmax
         Mmin = self.Mmin
-
+        # Call the ERA5 request script with the fetched parameters
         ERA5_request_script(title, lon_min, lon_max, lat_min, lat_max, directory, Ymin, Ymax, Mmin, Mmax)
-
+    # ------------------------------------------------------------------#
+    def select_ERA5_file(self):
+        """
+        This function allows the user to select a directory that contains the ERA5 model files.
+        """
+        directory_path = QFileDialog.getExistingDirectory(self, "Select directory")
+        self.era5_path = directory_path
+    def on_execute_Bulk(self):
+        era5_dir = self.era5_path
+        y_max = self.Ymax
+        y_min = self.Ymin
+        title = self.titre
+        d_min = self.Dmin
+        m_min = self.Mmin
+        m_max = self.Mmax
+        grid_dir = self.directory
+        grdname = self.grdname_full_path
+        mo_min = self.Mmin
+        y_orig = 2000
+        directory = self.directory
+        main(era5_dir, m_min, grid_dir, title, grdname, d_min, directory)
     ###############################################################################################
     #                                    Save Variable                                            #
     ###############################################################################################
@@ -629,15 +776,12 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         lat_max = self.latmaxLineEdit.text()
         lon_min = self.lonminLineEdit.text()
         lon_max = self.lonmaxLineEdit.text()
-
         if not self.titre:
             QMessageBox.warning(self, "Warning", "Il manque la variable: titre")
             return
-
         if not directory:
             QMessageBox.warning(self, "Warning", "Il manque la variable: environment_directory")
             return
-
         if not grdname:
             QMessageBox.warning(self, "Warning", "Il manque la variable: grdname")
             return

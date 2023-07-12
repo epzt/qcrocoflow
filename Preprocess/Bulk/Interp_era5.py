@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 import os
-from Qsat import qsat
+from .Qsat import qsat
 from netCDF4 import Dataset
 
 

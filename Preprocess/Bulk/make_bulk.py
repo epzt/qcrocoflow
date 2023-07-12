@@ -2,9 +2,9 @@ import os
 from netCDF4 import Dataset
 import numpy as np
 import xarray as xr
-from Create_Nc_Bulk import create_bulk
-from nc_add_globatt import add_global_attributes
-from Interp_era5 import interp_ERA5
+from .Create_Nc_Bulk import create_bulk
+from .nc_add_globatt import add_global_attributes
+from .Interp_era5 import interp_ERA5
 
 def compute_time_values(time, itolap, dt, tlen0):
     """
