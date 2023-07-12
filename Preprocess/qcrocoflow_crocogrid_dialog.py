@@ -61,6 +61,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.load_TPXO_path()
         self.Environnement_2.setToolTip("Bonjour")
         self.connect_signals_and_slots()
+        self.tabWidget.setCurrentIndex(2)
         #init Grid
         self.titre = ""
         self.grid_layer = None
