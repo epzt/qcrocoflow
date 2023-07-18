@@ -102,11 +102,15 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.s2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
 
         #initDatabase
-        root_path = os.path.dirname(os.path.dirname(__file__))
-        project_path = os.path.join(root_path, "project")
+        # Obtenir le chemin du script actuellement exécuté
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        project_path = os.path.join(current_path, "..", "..", "BaseDon")
+        # Vérifier si ce dossier existe, sinon le créer
+        os.makedirs(project_path, exist_ok=True)
         self.db_path = os.path.join(project_path, "Grid.db")
         self.db = QSqlDatabase.addDatabase('QSQLITE')
         self.db.setDatabaseName(self.db_path)
+
         if not self.db.open():
             QMessageBox.critical(self, "Database Error", self.db.lastError().text())
         self.load_projects()
