@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from .TPXO2CROCO_Script import TPXO2CROCO
 from PyQt5.QtWidgets import QMessageBox
-
-def make_tides_script(TPXO_path, grdname_full_path, ROMSnames, simudate, date_min_datetime, grdname):
+import os
+def make_tides_script(TPXO_path, grdname_full_path, ROMSnames, simudate, date_min_datetime, grdname, directory):
     QMessageBox.warning(None, "Warning",
                         "Warning: Please note, the generation of forcing files may take some time. Do not quit QGIS, and wait for the loading to finish. You will be notified once the process is complete.")
     # Define initial simulation date
@@ -10,11 +10,13 @@ def make_tides_script(TPXO_path, grdname_full_path, ROMSnames, simudate, date_mi
 
     # Define simulation length in days
     lengthSim = simudate  # Approximate length of model run in days. TODO: replace with difference between simulation dates
-    grdnamefullpath = grdname_full_path.replace("/", "\\")
-    fnGrid = r'{}'.format(grdnamefullpath)
+    #grdnamefullpath = grdname_full_path.replace("/", "\\")
+
+    fnGrid = r'{}'.format(grdname_full_path)
     # Define paths to grid and output files
 
-    fnOut = grdname + "_tides.nc"
+    fnOut = os.path.join(directory, grdname + "_tides.nc")
+    print(fnOut)
     # Define list of harmonique
     ROMSnames= ROMSnames
 

@@ -709,7 +709,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         TPXO_path = self.TPXO_path
         grdname = self.gridnameLineEdit.text()
         directory = self.directory
-        make_tides_script(TPXO_path, croco_grd, harmoniques, lengthSim, date_min_datetime, grdname,directory)
+        make_tides_script(TPXO_path, croco_grd, harmoniques, lengthSim, date_min_datetime, grdname, directory)
 
     ###############################################################################################
     #                                          BULK                                               #

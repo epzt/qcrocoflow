@@ -43,7 +43,7 @@
    </property>
    <widget class="QWidget" name="forcingGridTab">
     <attribute name="title">
-     <string>Grid</string>
+     <string>Inputs</string>
     </attribute>
     <widget class="QTabWidget" name="tabWidget_3">
      <property name="geometry">
@@ -59,6 +59,9 @@
        <pointsize>10</pointsize>
       </font>
      </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
      <property name="tabPosition">
       <enum>QTabWidget::West</enum>
      </property>
@@ -67,7 +70,7 @@
      </property>
      <widget class="QWidget" name="tab_6">
       <attribute name="title">
-       <string>Paramétres</string>
+       <string>Settings</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
        <item row="15" column="0" colspan="2">
@@ -222,7 +225,7 @@
      </widget>
      <widget class="QWidget" name="tab_7">
       <attribute name="title">
-       <string>Sélection de la zone</string>
+       <string>Grid</string>
       </attribute>
       <widget class="QPushButton" name="selectzoneButton">
        <property name="geometry">
@@ -234,7 +237,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>Sélectionner votre zone d'étude </string>
+        <string>Select your area</string>
        </property>
       </widget>
       <widget class="QPushButton" name="gridexecuteButton">
@@ -247,7 +250,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>éxecuter </string>
+        <string>Process</string>
        </property>
       </widget>
       <widget class="QSplitter" name="splitter">
@@ -321,7 +324,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>Sauvegarder les paramétres actuels</string>
+        <string>Save settings</string>
        </property>
       </widget>
       <widget class="QRadioButton" name="dmsButton">
