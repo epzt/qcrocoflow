@@ -769,16 +769,11 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.era5_path = directory_path
     def on_execute_Bulk(self):
         era5_dir = self.era5_path
-        y_max = self.Ymax
-        y_min = self.Ymin
         title = self.titre
         d_min = self.Dmin
         m_min = self.Mmin
-        m_max = self.Mmax
         grid_dir = self.directory
         grdname = self.grdname_full_path
-        mo_min = self.Mmin
-        y_orig = 2000
         directory = self.directory
         main(era5_dir, m_min, grid_dir, title, grdname, d_min, directory)
     ###############################################################################################
