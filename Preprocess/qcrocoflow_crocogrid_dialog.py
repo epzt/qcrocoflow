@@ -583,7 +583,23 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         m = int(m_temp)
         s = (m_temp - m) * 60
         return "{}°{}'{}\"".format(d, m, s)
+    ######################
+    # Grid.exe
+    ######################
 
+    def on_execute_grid(self):
+        directory = self.Environnement_2.text()
+        title = self.gridprojecttitleLineEdit.text()
+        grdname = self.gridnameLineEdit.text() + '.nc'
+        lon_min = float(self.lon_min)
+        lon_max = float(self.lon_max)
+        lat_min = float(self.lat_min)
+        lat_max = float(self.lat_max)
+        dl = float(self.dlDoubleSpin.text())
+        topo = self.topodirLineEdit.text()
+
+        self.grdname_full_path = make_grid_function(title, grdname, lon_min, lon_max, lat_min, lat_max, dl, topo, directory)
+        print(self.grdname_full_path)
 
     ###############################################################################################
     #                                        TIDES                                                #
@@ -776,6 +792,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         grdname = self.grdname_full_path
         directory = self.directory
         main(era5_dir, m_min, grid_dir, title, grdname, d_min, directory)
+
     ###############################################################################################
     #                                    Save Variable                                            #
     ###############################################################################################
@@ -783,22 +800,14 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
     def save_variables_to_file(self):
         directory = self.Environnement_2.text()
         title = self.gridprojecttitleLineEdit.text()
-        grdname = self.gridnameLineEdit.text()
+        grdname = self.grdname
         dl = self.dlDoubleSpin.text()
         topo = self.topodirLineEdit.text()
         lat_min = self.latminLineEdit.text()
         lat_max = self.latmaxLineEdit.text()
         lon_min = self.lonminLineEdit.text()
         lon_max = self.lonmaxLineEdit.text()
-        if not self.titre:
-            QMessageBox.warning(self, "Warning", "Il manque la variable: titre")
-            return
-        if not directory:
-            QMessageBox.warning(self, "Warning", "Il manque la variable: environment_directory")
-            return
-        if not grdname:
-            QMessageBox.warning(self, "Warning", "Il manque la variable: grdname")
-            return
+
 
         ###############################################################################################
         #                                  Create SQL                                                 #
@@ -838,7 +847,6 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
                 VALUES 
                 (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
-
         query.prepare(sql)
         query.addBindValue(title)
         query.addBindValue(directory)
@@ -856,23 +864,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
 
         QMessageBox.information(self, "Information", "Variables saved to the file and database.")
 
-    ######################
-    # Grid.exe
-    ######################
 
-    def on_execute_grid(self):
-        directory = self.Environnement_2.text()
-        title = self.gridprojecttitleLineEdit.text()
-        grdname = self.gridnameLineEdit.text() + '.nc'
-        lon_min = float(self.lon_min)
-        lon_max = float(self.lon_max)
-        lat_min = float(self.lat_min)
-        lat_max = float(self.lat_max)
-        dl = float(self.dlDoubleSpin.text())
-        topo = self.topodirLineEdit.text()
-
-        self.grdname_full_path = make_grid_function(title, grdname, lon_min, lon_max, lat_min, lat_max, dl, topo, directory)
-        print(self.grdname_full_path)
 
     ####################
     # Open project
@@ -900,15 +892,14 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         query.exec_()
 
         if query.next():
-            title = query.value(1)
-            directory = query.value(2)
-            grdname = query.value(3)
-            dl = query.value(4)
-            topo = query.value(5)
-            lat_min = query.value(6)
-            lat_max = query.value(7)
-            lon_min = query.value(8)
-            lon_max = query.value(9)
+            directory = query.value(1)
+            grdname = query.value(2)
+            dl = query.value(3)
+            topo = query.value(4)
+            lat_min = query.value(5)
+            lat_max = query.value(6)
+            lon_min = query.value(7)
+            lon_max = query.value(8)
 
             # MAJ variables
             self.Environnement_2.setText(directory)

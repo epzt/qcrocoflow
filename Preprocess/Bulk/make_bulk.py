@@ -107,27 +107,29 @@ def get_y_m(era5_dir):
     """
     Get the minimum and maximum year and month
     """
-    # Initialize variables to hold the minimum and maximum year and month
     y_min, y_max, m_min, m_max = float('inf'), float('-inf'), float('inf'), float('-inf')
 
-    # Loop through all the files in the ERA5 directory
     for file in os.listdir(era5_dir):
-        # Extract the year and month from the file name
-        YM = file.split('_')[1][1:-3]
-        Y = int(YM[:4])
         try:
-            M = int(YM[4:])
-        except ValueError:
-            M = int(YM[5:])  # If the month part starts with 'M', skip the 'M'
-            print(f"Error converting month to int in file {file}, skipped 'M'")
-
-        # Update the minimum and maximum year and month if necessary
-        y_min = min(y_min, Y)
-        y_max = max(y_max, Y)
-        m_min = min(m_min, M)
-        m_max = max(m_max, M)
+            # Extract the year and month from the file name
+            YM = file.split('_')[1][1:-3]
+            Y = int(YM[:4])
+            try:
+                M = int(YM[4:])
+            except ValueError:
+                M = int(YM[5:])  # If the month part starts with 'M', skip the 'M'
+                print(f"Error converting month to int in file {file}, skipped 'M'")
+            y_min = min(y_min, Y)
+            y_max = max(y_max, Y)
+            m_min = min(m_min, M)
+            m_max = max(m_max, M)
+        except:
+            # Print a warning message if a file can't be parsed, then continue with the next file
+            print(f"Warning: could not parse file {file}. Please check the file name.")
+            continue
 
     return y_min, y_max, m_min, m_max
+
 
 
 def main(era5_dir, mo_min, grid_dir, title, grdname, d_min, directory):
@@ -139,7 +141,6 @@ def main(era5_dir, mo_min, grid_dir, title, grdname, d_min, directory):
     mo_min = mo_min
     directory = directory
     d_min = d_min
-
     grid_dir = grid_dir
     era5_dir = era5_dir
     title = title
