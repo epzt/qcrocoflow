@@ -1,13 +1,14 @@
 import netCDF4 as nc
 import datetime
-
-def create_bulk(frcname, grdname, title, bulkt, bulkc):
+import os
+def create_bulk(grdname, title, bulkt, bulkc, directory):
     grd = nc.Dataset(grdname, 'r')
     L = len(grd.dimensions['xi_psi'])
     M = len(grd.dimensions['eta_psi'])
     grd.close()
     Lp = L + 1
     Mp = M + 1
+    frcname = directory
 
     nw = nc.Dataset(frcname, 'w', format='NETCDF4')
     nw.createDimension('xi_rho', Lp)
