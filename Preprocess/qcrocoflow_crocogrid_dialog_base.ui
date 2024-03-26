@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>395</width>
-    <height>711</height>
+    <width>375</width>
+    <height>725</height>
    </rect>
   </property>
   <property name="font">
@@ -24,10 +24,10 @@
   <widget class="QTabWidget" name="GridTabsWidget">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>371</width>
-     <height>701</height>
+     <x>0</x>
+     <y>0</y>
+     <width>375</width>
+     <height>695</height>
     </rect>
    </property>
    <property name="font">
@@ -63,7 +63,7 @@
       <enum>QTabWidget::West</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_6">
       <attribute name="title">
@@ -511,7 +511,7 @@
         <string>TextLabel</string>
        </property>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>40</x>
@@ -542,7 +542,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -594,7 +594,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>160</x>
@@ -656,7 +656,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>80</x>
@@ -1127,7 +1127,37 @@
     </widget>
    </widget>
   </widget>
+  <widget class="QPushButton" name="mainDialogCloseButton">
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>698</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>CLOSE</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>mainDialogCloseButton</sender>
+   <signal>clicked()</signal>
+   <receiver>qcrocoflow_crocogridDialogBase</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>327</x>
+     <y>694</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>245</x>
+     <y>699</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

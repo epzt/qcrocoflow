@@ -37,20 +37,23 @@ LOCALES = en
 # translation
 SOURCES = \
 	__init__.py \
-	qcrocoflow.py qcrocoflow_dockwidget.py qcrocoflow_croco2qgis.py qcrocoflow_timerefrence.py
+	qcrocoflow.py qcrocoflow_dockwidget.py qcrocoflow_croco2qgis.py qcrocoflow_timerefrence.py \
+	qcrocoflow_config.py  qcrocoflow_croco2qgis_dialog.py qcrocoflow_dialog.py qcrocoflow_dialog_base.py \
+	qcrocoflow_dockwidget_base.py qcrocoflow_qcrocotools.py qcrocoflow_timereference_dialog.py
 
 PLUGINNAME = qcrocoflow
 
 PY_FILES = \
 	__init__.py \
 	qcrocoflow.py qcrocoflow_dockwidget.py \
-	qcrocotools.py
 
-UI_FILES = qcrocoflow_dockwidget_base.ui qcrocoflow_croco2qgis_dialog.ui qcrocoflow_timereference_dialog.ui
+
+UI_FILES = qcrocoflow_dockwidget_base.ui qcrocoflow_croco2qgis_dialog.ui qcrocoflow_timereference_dialog.ui \
+           qcrocoflow_dialog_base.ui
 
 EXTRAS = metadata.txt icon.png
 
-EXTRA_DIRS =
+EXTRA_DIRS = Preprocess
 
 COMPILED_RESOURCE_FILES = resources.py
 
@@ -65,7 +68,7 @@ PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
 #	* Windows:
 #	  AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins'
 
-QGISDIR=/home/epoizot/.local/share/QGIS/QGIS3/profiles/default/python/plugins/
+QGISDIR=.local/share/QGIS/QGIS3/profiles/default
 
 #################################################
 # Normally you would not need to edit below here
@@ -128,7 +131,7 @@ deploy: compile doc transcompile
 	cp -vfr i18n $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr $(HELP) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)/help
 	# Copy extra directories if any
-	(foreach EXTRA_DIR,(EXTRA_DIRS), cp -R (EXTRA_DIR) (HOME)/(QGISDIR)/python/plugins/(PLUGINNAME)/;)
+	$(foreach EXTRA_DIR,$(EXTRA_DIRS), cp -R $(EXTRA_DIR) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME))
 
 
 # The dclean target removes compiled python files from plugin directory
