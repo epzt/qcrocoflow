@@ -29,7 +29,7 @@ import numpy as np
 # PyQt5 modules for interacting with a SQLite database
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 # PyQt5 modules for creating a file dialog, a message box, labels, and box layouts
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QVBoxLayout
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QVBoxLayout, QGraphicsScene, QGraphicsPolygonItem, QGraphicsLineItem
 # QGIS core modules for working with coordinate reference systems, geographic features, geometric shapes, points, rectangles,
 # geographic projects, raster layers, coordinate transformations, vector layers, fill symbols, and single symbol renderers
 from qgis.core import (QgsCoordinateReferenceSystem, QgsFeature, QgsGeometry,
@@ -40,8 +40,8 @@ from qgis.gui import QgsMapToolExtent
 # PyQt5 module for working with Qt's user interface compiler
 from PyQt5 import uic
 # PyQt5 modules for working with dates, URL, and desktop services
-from PyQt5.QtCore import QDate, Qt, QUrl
-from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtCore import QDate, Qt, QUrl, QPointF
+from PyQt5.QtGui import QDesktopServices, QPolygonF, QPen, QBrush
 # PyQt5 modules for creating a dialog and push buttons
 from PyQt5.QtWidgets import QDialog, QPushButton
 # Local modules for creating a grid, making bulk and tides files for croco
@@ -49,6 +49,7 @@ from .Grid.make_grid import make_grid_function
 from .Bulk.ERA5_request import ERA5_request_script
 from .Tides.make_tides import make_tides_script
 from .Bulk.make_bulk import *
+from .Ini.qcrocoflow_create_ini_file import qcrocoflowCreateIniFile
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_crocogrid_dialog_base.ui'))
@@ -85,6 +86,8 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.Ymin = None
         self.Mmin = None
         self.Dmin = None
+        # Init intialisation
+        self.PlotSCoordinatesGraphics()
         #initTides
         self.ROMSnames = self.create_ROMSnames_list()
         self.m2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
@@ -100,6 +103,12 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.mn4checkBox.stateChanged.connect(self.on_checkBox_state_changed)
         self.ms4checkBox.stateChanged.connect(self.on_checkBox_state_changed)
         self.s2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
+
+        # Initialisation file parameters
+        self.verticalLayersSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
+        self.thetasDoubleSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
+        self.thetabDoubleSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
+        self.vtransformSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
 
         #initDatabase
         root_path = os.path.dirname(os.path.dirname(__file__))
@@ -565,6 +574,46 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         s = (m_temp - m) * 60
         return "{}°{}'{}\"".format(d, m, s)
 
+    ###############################################################################################
+    #                                Initialisation file                                          #
+    ###############################################################################################
+    def PlotSCoordinatesGraphics(self):
+        """
+        Manage plot of the graph showing vertical strecthing fonction
+        Allows to define/set theta_s, theta_b, N and vtransform (set at 2 by default)
+        """
+        # Coords of points to draw polygon and lines
+        # values are defined according GUI widget size
+        ycoords = [190, 120, 100, 60, 40, 35, 35]
+        xcoords = [0, 80, 160, 220, 260, 270, 280]
+        scene = QGraphicsScene(0, 0, 280, 190)
+        polyItem = QGraphicsPolygonItem()
+        polyItem.setPolygon(QPolygonF(
+            [QPointF(xcoords[0], ycoords[0]),
+             QPointF(xcoords[1], ycoords[1]),
+             QPointF(xcoords[2], ycoords[2]),
+             QPointF(xcoords[3], ycoords[3]),
+             QPointF(xcoords[4], ycoords[4]),
+             QPointF(xcoords[5], ycoords[5]),
+             QPointF(xcoords[6], ycoords[6]),
+             QPointF(xcoords[6], ycoords[0])],))
+        polyItem.setFillRule(Qt.WindingFill)
+        polyItem.setBrush(QBrush(Qt.green))
+
+        vtransform = self.vtransformSpinBox.value()
+        initFile = qcrocoflowCreateIniFile()
+        sc_r, Cs_r, sc_w, Cs_w = initFile.scoordinate(self.thetasDoubleSpinBox.value(),
+                                                      self.thetabDoubleSpinBox.value(),
+                                                      self.verticalLayersSpinBox.value(),
+                                                      hc = self.criticalDepthDoubleSpinBox.value(),
+                                                      vtransform = self.vtransformSpinBox.value())
+        for c in Cs_r:
+            for i in range(len(xcoords)-1):
+                lineItem = QGraphicsLineItem()
+                lineItem.setLine(xcoords[i], ycoords[i] * (-c), xcoords[i+1], ycoords[i+1] * (-c))
+                scene.addItem(lineItem)
+        scene.addItem(polyItem)
+        self.scoordinatesGraphicsView.setScene(scene)
 
     ###############################################################################################
     #                                        TIDES                                                #
