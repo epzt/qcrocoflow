@@ -5,16 +5,66 @@ from datetime import date
 import os
 # QT5 imports
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QCheckBox, QVBoxLayout
 # Specific imports
 import copernicusmarine
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_ini_copernicus_dialog.ui'))
-class qcrocoflowCopernicus(QDialog, FORM_CLASS):
+class qcrocoflow_Copernicus(QDialog, FORM_CLASS):
     def __init__(self, parent=None):
-        self.product = None
-class qcrocoflowCreateIniFile():
+        super(qcrocoflow_Copernicus, self).__init__(parent)
+        self.setupUi(self)
+        # Initialisation of Copernicus products list
+        productNames = ["cmems_mod_ibi_phy_anfc_0.027deg-2D_PT15M-i",
+                        "cmems_mod_ibi_phy_anfc_0.027deg-2D_PT1H-m",
+                        "cmems_mod_ibi_phy_anfc_0.027deg-3D_PT1H-m",
+                        "cmems_mod_ibi_phy_anfc_0.027deg-3D_P1D-m",
+                        "cmems_mod_ibi_phy_anfc_0.027deg-3D_P1M-m"]
+        self.productListCopernicusComboBox.insertItems(0,productNames)
+        self.productListCopernicusComboBox.setCurrentIndex(3)
+        self.BuildCopernicusVariableCheckBoxes()
+        # Connections
+        self.productListCopernicusComboBox.currentIndexChanged.connect(self.BuildCopernicusVariableCheckBoxes)
+
+
+    def BuildCopernicusVariableCheckBoxes(self):
+        if self.productListCopernicusComboBox.currentIndex() == 0:
+            # cmems_mod_ibi_phy_anfc_0.027deg-2D_PT15M-i
+            variableList = ["time","longitude","latitude","zos","uo","vo"]
+        elif self.productListCopernicusComboBox.currentIndex() == 1:
+            # cmems_mod_ibi_phy_anfc_0.027deg-2D_PT1H-m
+            variableList = ["time","longitude","latitude","thetao","uo","vo","ubar","vbar","zos","mlotst"]
+        elif self.productListCopernicusComboBox.currentIndex() == 2:
+            # cmems_mod_ibi_phy_anfc_0.027deg-3D_PT1H-m
+            variableList = ["time","depth","longitude","latitude","thetao","so","uo","vo"]
+        elif self.productListCopernicusComboBox.currentIndex() == 3:
+            # cmems_mod_ibi_phy_anfc_0.027deg-3D_P1D-m
+            variableList = ["time","longitude","latitude","depth","thetao","so","uo","vo","zos","42ercat","mlotst"]
+        else :
+            # cmems_mod_ibi_phy_anfc_0.027deg-3D_P1M-m
+            variableList = ["42ercat","depth","longitude","latitude","mlotst","so","thetao","time","uo","vo","zos"]
+
+        theLayout = self.variableCheckboxGridGroupBox.layout()
+        for i in range(theLayout.rowCount()):
+            for j in range(theLayout.columnCount()):
+                widget = theLayout.itemAtPosition(i,j).widget()
+                theLayout.removeItem(theLayout.itemAtPosition(i,j))
+
+        checboxList = list()
+        i = j = 0
+        for v in variableList:
+            checboxList.append(QCheckBox(v))
+            if v == "latitude" or v == "longitude":
+                checboxList[-1].setChecked(True) # Lat and lon checked by default
+            theLayout.addWidget(checboxList[-1],j,i)
+            i += 1
+            if i >= 5:
+                j += 1
+                i = 0
+
+
+class qcrocoflow_CreateIniFile():
     def __init__(self, _inifilename = None, _gridfilename = None):
         self.inifilename = _inifilename
         self.gridfilename = _gridfilename

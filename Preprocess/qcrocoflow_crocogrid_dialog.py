@@ -49,7 +49,7 @@ from .Grid.make_grid import make_grid_function
 from .Bulk.ERA5_request import ERA5_request_script
 from .Tides.make_tides import make_tides_script
 from .Bulk.make_bulk import *
-from .Ini.qcrocoflow_create_ini_file import qcrocoflowCreateIniFile
+from .Ini.qcrocoflow_create_ini_file import qcrocoflow_CreateIniFile, qcrocoflow_Copernicus
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_crocogrid_dialog_base.ui'))
@@ -109,6 +109,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.thetasDoubleSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
         self.thetabDoubleSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
         self.vtransformSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
+        self.initialCopernicusPushButton.clicked.connect(self.GetIniFromCopernicus)
 
         #initDatabase
         root_path = os.path.dirname(os.path.dirname(__file__))
@@ -601,7 +602,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         polyItem.setBrush(QBrush(Qt.green))
 
         vtransform = self.vtransformSpinBox.value()
-        initFile = qcrocoflowCreateIniFile()
+        initFile = qcrocoflow_CreateIniFile()
         sc_r, Cs_r, sc_w, Cs_w = initFile.scoordinate(self.thetasDoubleSpinBox.value(),
                                                       self.thetabDoubleSpinBox.value(),
                                                       self.verticalLayersSpinBox.value(),
@@ -614,6 +615,11 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
                 scene.addItem(lineItem)
         scene.addItem(polyItem)
         self.scoordinatesGraphicsView.setScene(scene)
+
+
+    def GetIniFromCopernicus(self):
+        copernicus = qcrocoflow_Copernicus(parent=self)
+        copernicus.show()
 
     ###############################################################################################
     #                                        TIDES                                                #

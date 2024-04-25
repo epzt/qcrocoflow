@@ -39,24 +39,11 @@
     </rect>
    </property>
   </widget>
-  <widget class="QGroupBox" name="variableListCopernicusGroupBox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>60</y>
-     <width>251</width>
-     <height>101</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>Variable list</string>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>160</y>
+     <y>170</y>
      <width>251</width>
      <height>81</height>
     </rect>
@@ -215,11 +202,22 @@
     </property>
    </widget>
   </widget>
+  <widget class="QGroupBox" name="variableCheckboxGridGroupBox">
+   <property name="geometry">
+    <rect>
+     <x>9</x>
+     <y>60</y>
+     <width>251</width>
+     <height>111</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="variableCheckboxLayout" rowminimumheight="0" columnminimumwidth="0"/>
+  </widget>
   <widget class="QWidget" name="">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>250</y>
+     <y>260</y>
      <width>255</width>
      <height>91</height>
     </rect>
