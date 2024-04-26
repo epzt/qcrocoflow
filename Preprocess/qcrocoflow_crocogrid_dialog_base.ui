@@ -66,7 +66,7 @@
       <enum>QTabWidget::West</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab_6">
       <attribute name="title">
@@ -747,6 +747,25 @@ Put choosen parameters in respective files.</string>
         </property>
         <property name="text">
          <string>Copernicus</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="copernicusLogoLabel">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>30</y>
+          <width>41</width>
+          <height>41</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>:/plugins/qcrocoflow/icons/copernicusmarine.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
         </property>
        </widget>
       </widget>

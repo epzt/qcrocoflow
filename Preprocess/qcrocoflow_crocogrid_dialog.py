@@ -41,7 +41,7 @@ from qgis.gui import QgsMapToolExtent
 from PyQt5 import uic
 # PyQt5 modules for working with dates, URL, and desktop services
 from PyQt5.QtCore import QDate, Qt, QUrl, QPointF
-from PyQt5.QtGui import QDesktopServices, QPolygonF, QPen, QBrush
+from PyQt5.QtGui import QDesktopServices, QPolygonF, QPen, QBrush, QPixmap
 # PyQt5 modules for creating a dialog and push buttons
 from PyQt5.QtWidgets import QDialog, QPushButton
 # Local modules for creating a grid, making bulk and tides files for croco
@@ -110,6 +110,8 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
         self.thetabDoubleSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
         self.vtransformSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
         self.initialCopernicusPushButton.clicked.connect(self.GetIniFromCopernicus)
+
+        self.copernicusLogoLabel.setPixmap(QPixmap("./icons/copernicusmarine.png"))
 
         #initDatabase
         root_path = os.path.dirname(os.path.dirname(__file__))
@@ -618,7 +620,7 @@ class qcrocoflow_crocogridDialog(QDialog, FORM_CLASS):
 
 
     def GetIniFromCopernicus(self):
-        copernicus = qcrocoflow_Copernicus(parent=self)
+        copernicus = qcrocoflow_Copernicus({}, parent=self)
         copernicus.show()
 
     ###############################################################################################

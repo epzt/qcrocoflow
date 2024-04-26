@@ -5,14 +5,15 @@ from datetime import date
 import os
 # QT5 imports
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QCheckBox, QVBoxLayout
+from PyQt5.QtWidgets import QDialog, QCheckBox, QGridLayout, QStackedWidget, QVBoxLayout, QWidget, QMessageBox, QFileDialog
+from PyQt5.QtCore import Qt
 # Specific imports
 import copernicusmarine
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_ini_copernicus_dialog.ui'))
 class qcrocoflow_Copernicus(QDialog, FORM_CLASS):
-    def __init__(self, parent=None):
+    def __init__(self, _argDict, parent=None):
         super(qcrocoflow_Copernicus, self).__init__(parent)
         self.setupUi(self)
         # Initialisation of Copernicus products list
@@ -23,47 +24,89 @@ class qcrocoflow_Copernicus(QDialog, FORM_CLASS):
                         "cmems_mod_ibi_phy_anfc_0.027deg-3D_P1M-m"]
         self.productListCopernicusComboBox.insertItems(0,productNames)
         self.productListCopernicusComboBox.setCurrentIndex(3)
-        self.BuildCopernicusVariableCheckBoxes()
+        procductVariables = [["time","longitude","latitude","zos","uo","vo"],
+                             ["time","longitude","latitude","thetao","uo","vo","ubar","vbar","zos","mlotst"],
+                             ["time","longitude","latitude","depth","thetao","so","uo","vo"],
+                             ["time","longitude","latitude","depth","thetao","so","uo","vo","zos","42ercat","mlotst"],
+                             ["time","longitude","latitude","42ercat","depth","mlotst","so","thetao","uo","vo","zos"]]
+        # to manage checboxes variables
+        self.outputFileName = None
+        self.outputDirName = None
+        self.stackedWidget = QStackedWidget()
+        self.productPageList = list()
+        self.productPageList.append(self.CreateCheckBoxVariable(procductVariables[0]))
+        self.stackedWidget.addWidget(self.productPageList[-1])
+        self.productPageList.append(self.CreateCheckBoxVariable(procductVariables[1]))
+        self.stackedWidget.addWidget(self.productPageList[-1])
+        self.productPageList.append(self.CreateCheckBoxVariable(procductVariables[2]))
+        self.stackedWidget.addWidget(self.productPageList[-1])
+        self.productPageList.append(self.CreateCheckBoxVariable(procductVariables[3]))
+        self.stackedWidget.addWidget(self.productPageList[-1])
+        self.productPageList.append(self.CreateCheckBoxVariable(procductVariables[4]))
+        self.stackedWidget.addWidget(self.productPageList[-1])
+        layout = QVBoxLayout()
+        layout.addWidget(self.stackedWidget)
+        self.variableCheckboxGroupBox.setLayout(layout)
         # Connections
-        self.productListCopernicusComboBox.currentIndexChanged.connect(self.BuildCopernicusVariableCheckBoxes)
+        self.productListCopernicusComboBox.currentIndexChanged.connect(self.SwitchPage)
+        self.downloadCopernicusFilePushButton.clicked.connect(self.GetCopernicusDataFile)
+        self.outputDirCopernicusPushButton.clicked.connect(self.SelectOutputCopernicusDirName)
+        self.outputCopernicusFileLineEdit.textChanged.connect(self.SetOutputCopernicusFileName)
 
+    def SetOutputCopernicusFileName(self, _name):
+        self.outputFileName = os.path.basename(self.outputCopernicusFileLineEdit.text())
+        file_name, file_extension = os.path.splitext(self.outputFileName)
+        if file_name == "" and file_extension != ".nc":
+            return
+        self.outputFileName = file_name + ".nc"
+        self.outputCopernicusFileLineEdit.setText(self.outputFileName)
+        self.outputCopernicusFileLineEdit.setCursorPosition(len(self.outputFileName)-3)
+    def SelectOutputCopernicusDirName(self):
+        self.outputDirName = QFileDialog.getExistingDirectory(self, "Select a directory", os.path.expanduser("~user"), QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+        self.outputDirNameLabel.setText(self.outputDirName)
 
-    def BuildCopernicusVariableCheckBoxes(self):
-        if self.productListCopernicusComboBox.currentIndex() == 0:
-            # cmems_mod_ibi_phy_anfc_0.027deg-2D_PT15M-i
-            variableList = ["time","longitude","latitude","zos","uo","vo"]
-        elif self.productListCopernicusComboBox.currentIndex() == 1:
-            # cmems_mod_ibi_phy_anfc_0.027deg-2D_PT1H-m
-            variableList = ["time","longitude","latitude","thetao","uo","vo","ubar","vbar","zos","mlotst"]
-        elif self.productListCopernicusComboBox.currentIndex() == 2:
-            # cmems_mod_ibi_phy_anfc_0.027deg-3D_PT1H-m
-            variableList = ["time","depth","longitude","latitude","thetao","so","uo","vo"]
-        elif self.productListCopernicusComboBox.currentIndex() == 3:
-            # cmems_mod_ibi_phy_anfc_0.027deg-3D_P1D-m
-            variableList = ["time","longitude","latitude","depth","thetao","so","uo","vo","zos","42ercat","mlotst"]
-        else :
-            # cmems_mod_ibi_phy_anfc_0.027deg-3D_P1M-m
-            variableList = ["42ercat","depth","longitude","latitude","mlotst","so","thetao","time","uo","vo","zos"]
-
-        theLayout = self.variableCheckboxGridGroupBox.layout()
-        for i in range(theLayout.rowCount()):
-            for j in range(theLayout.columnCount()):
-                widget = theLayout.itemAtPosition(i,j).widget()
-                theLayout.removeItem(theLayout.itemAtPosition(i,j))
-
+    def CreateCheckBoxVariable(self,_variableList):
+        page = QWidget()
         checboxList = list()
         i = j = 0
-        for v in variableList:
+        layout = QGridLayout()
+        for v in _variableList:
             checboxList.append(QCheckBox(v))
-            if v == "latitude" or v == "longitude":
-                checboxList[-1].setChecked(True) # Lat and lon checked by default
-            theLayout.addWidget(checboxList[-1],j,i)
+            if v == "latitude" or v == "longitude" or v == "time":
+                checboxList[-1].setChecked(True)  # Lat, lon , time checked by default
+                checboxList[-1].setEnabled(False)
+            layout.addWidget(checboxList[-1], j, i)
             i += 1
-            if i >= 5:
+            if i >= 3:
                 j += 1
                 i = 0
+        page.setLayout(layout)
+        return page
 
+    def SwitchPage(self):
+        self.stackedWidget.setCurrentIndex(self.productListCopernicusComboBox.currentIndex())
 
+    def GetCopernicusDataFile(self):
+        thePage = self.stackedWidget.currentWidget()
+        variableList = list()
+        for i in range(thePage.layout().count()):
+            item = thePage.layout().itemAt(i)
+            if item.widget().isChecked():
+                variableList.append(item.widget().text())
+        copernicusmarine.subset(
+            dataset_id=self.productListCopernicusComboBox.currentText(),
+            variables=variableList,
+            minimum_longitude=self.minLongitudeCopernicusLineEdit.text(),
+            maximum_longitude=self.maxLongitudeCopernicusLineEdit.text(),
+            minimum_latitude=self.minLatitudeCopernicusLineEdit.text(),
+            maximum_latitude=self.maxLatitudeCopernicusLineEdit.text(),
+            start_datetime=self.startDateCopernicusDateEdit.date().toString(Qt.ISODate),
+            end_datetime=self.endDateCopernicusDateEdit.date().toString(Qt.ISODate),
+            minimum_depth=self.minDepthCopernicusDoubleSpinBox.value(),
+            maximum_depth=self.maxDepthCopernicusDoubleSpinBox.value(),
+            output_filename=self.outputFileName,
+            output_directory=self.outputDirName
+            )
 class qcrocoflow_CreateIniFile():
     def __init__(self, _inifilename = None, _gridfilename = None):
         self.inifilename = _inifilename
