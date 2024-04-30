@@ -18,10 +18,15 @@
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
+ * This file contains global variables available over the plugin           *
+ * It also contains the class which manage XML configuration file          *
  ***************************************************************************/
 """
 
 from datetime import datetime, timezone
+import xml.etree.ElementTree as ET
+import os
+from PyQt5.QtWidgets import QDialog, QCheckBox, QGridLayout, QStackedWidget, QVBoxLayout, QWidget, QMessageBox, QFileDialog
 
 # Seconds since 01-01-1900
 DELTASECONDSREFS = datetime(1900,1,1,tzinfo=timezone.utc).timestamp()
@@ -30,3 +35,63 @@ EPSGWGS84 = "EPSG:4326"
 # Lower limit of ratio for sequenceMatcher function of difflib
 DEFAULTRATIO = 0.6
 
+#---------------------------------------
+# qcrocoflow_XML_Management: manage XML file of project configurations
+#
+#---------------------------------------
+class qcrocoflow_XML_Management:
+    def __init__(self, _parent):
+        self.mainApp = _parent
+
+    def InitializeRoot(self, _fullpathfilename):
+        if os.path.exists(_fullpathfilename):
+            if QMessageBox.information(self.mainApp, "Over right", f"File {os.path.basename(_fullpathfilename)} exists\nDo you want to earse it ?", \
+                                    buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
+                                    defaultButton = QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Cancel:
+                return
+        root = ET.Element('Projects')
+        root.append(self.NewProjectTree())
+        tree = ET.ElementTree(root)
+        tree.write('testQCROCOFLOW.xml')
+
+    def NewProjectTree(self):
+        project = ET.Element('Project')
+        project.set('Name','')
+        project.set('WorkingDirectory','')
+        project.set('CrocoDirectory','')
+        project.set('StartDate','')
+        # --
+        grid = ET.SubElement(project, 'Grid')
+        coords = ET.SubElement(grid, 'Coords')
+        coords.set('MinLat','')
+        coords.set('MaxLat','')
+        coords.set('MinLon','')
+        coords.set('MaxLon','')
+        grid.set('Resolution','')
+        grid.set('VerticalLevels','')
+        grid.set('ThetaS','0.0')
+        grid.set('ThetaB','0.0')
+        grid.set('VTransform','2')
+        grid.set('HC','')
+        bathymetry = ET.SubElement(grid, 'Bathymetry')
+        bathymetry.set('RasterName','')
+        bathymetry.set('Directory','')
+        # --
+        conditions = ET.SubElement(project,'Conditions')
+        sources = ET.SubElement(conditions, 'Sources')
+        initial = ET.SubElement(sources, 'Initial')
+        initial.set('InitialName','')
+        initial.set('Directory','')
+        tide = ET.SubElement(sources,'Tide')
+        tide.set('TideName', '')
+        tide.set('Directory', '')
+        bulk = ET.SubElement(sources, 'Bulk')
+        bulk.set('InitialName', '')
+        bulk.set('Directory', '')
+        waves = ET.SubElement(sources,'Waves')
+        waves.set('InitialName', '')
+        waves.set('Directory', '')
+        sediment = ET.SubElement(sources, 'Sediment')
+        sediment.set('InitialName', '')
+        sediment.set('Directory', '')
+        return project

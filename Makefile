@@ -45,7 +45,9 @@ PLUGINNAME = qcrocoflow
 
 PY_FILES = \
 	__init__.py \
-	qcrocoflow.py qcrocoflow_dockwidget.py \
+	qcrocoflow.py qcrocoflow_dockwidget.py qcrocoflow_croco2qgis.py qcrocoflow_timerefrence.py \
+	qcrocoflow_config.py  qcrocoflow_croco2qgis_dialog.py qcrocoflow_dialog.py qcrocoflow_dialog_base.py \
+	qcrocoflow_dockwidget_base.py qcrocoflow_qcrocotools.py qcrocoflow_timereference_dialog.py
 
 
 UI_FILES = qcrocoflow_dockwidget_base.ui qcrocoflow_croco2qgis_dialog.ui qcrocoflow_timereference_dialog.ui \

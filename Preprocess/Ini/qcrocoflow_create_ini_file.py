@@ -107,7 +107,7 @@ class qcrocoflow_Copernicus(QDialog, FORM_CLASS):
             output_filename=self.outputFileName,
             output_directory=self.outputDirName
             )
-class qcrocoflow_CreateIniFile():
+class qcrocoflow_CreateIniFile:
     def __init__(self, _inifilename = None, _gridfilename = None):
         self.inifilename = _inifilename
         self.gridfilename = _gridfilename

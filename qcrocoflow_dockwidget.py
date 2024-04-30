@@ -87,90 +87,89 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Construction of menu bar entries and relative actions
         self.myQMenuBar = QMenuBar(self)
 
-
-
-
         ### Project ################################
-        projectMenu = self.myQMenuBar.addMenu('Project')
-        newProjectAction = QAction('New...', self)
-        newProjectAction.triggered.connect(self.NewProject)
-        projectMenu.addAction(newProjectAction)
+        self.projectMenu = self.myQMenuBar.addMenu('Project')
+        self.newProjectAction = QAction('New...', self)
+        self.newProjectAction.triggered.connect(self.NewProject)
+        self.projectMenu.addAction(self.newProjectAction)
         # ---
-        openProjectAction = QAction('Open...', self)
-        openProjectAction.triggered.connect(self.OpenProject)
-        projectMenu.addAction(openProjectAction)
+        self.openProjectAction = QAction('Open...', self)
+        self.openProjectAction.triggered.connect(self.OpenProject)
+        self.projectMenu.addAction(self.openProjectAction)
         # ---
-        saveProjectAction = QAction('Save', self)
-        saveProjectAction.triggered.connect(self.SaveProject)
-        projectMenu.addAction(saveProjectAction)
+        self.saveProjectAction = QAction('Save', self)
+        self.saveProjectAction.setEnabled(False)
+        self.saveProjectAction.triggered.connect(self.SaveProject)
+        self.projectMenu.addAction(self.saveProjectAction)
         # ---
-        saveProjectAction = QAction('Save as...', self)
-        saveProjectAction.triggered.connect(self.SaveAsProject)
-        projectMenu.addAction(saveProjectAction)
+        self.saveAsProjectAction = QAction('Save as...', self)
+        self.saveAsProjectAction.setEnabled(False)
+        self.saveAsProjectAction.triggered.connect(self.SaveAsProject)
+        self.projectMenu.addAction(self.saveAsProjectAction)
         # ---
-        projectMenu.addSeparator()
+        self.projectMenu.addSeparator()
         # ---
-        globalSettingsMenu = projectMenu.addMenu('Settings')
-        workingDirectoryAction = QAction(' Set working directory...', self)
-        workingDirectoryAction.triggered.connect(self.WorkingDirectory)
-        globalSettingsMenu.addAction(workingDirectoryAction)
+        self.globalSettingsMenu = self.projectMenu.addMenu('Settings')
+        self.workingDirectoryAction = QAction(' Set working directory...', self)
+        self.workingDirectoryAction.triggered.connect(self.WorkingDirectory)
+        self.globalSettingsMenu.addAction(self.workingDirectoryAction)
         # ---
-        projectMenu.addSeparator()
+        self.projectMenu.addSeparator()
         # ---
-        closeProjectAction = QAction('Close', self)
-        closeProjectAction.triggered.connect(self.CloseProject)
-        projectMenu.addAction(closeProjectAction)
+        self.closeProjectAction = QAction('Close', self)
+        self.closeProjectAction.triggered.connect(self.CloseProject)
+        self.projectMenu.addAction(self.closeProjectAction)
         ### Grid ################################
-        gridMenu = self.myQMenuBar.addMenu('Grid')
-        newGridAction = QAction('New...', self)
-        newGridAction.triggered.connect(self.NewGrid)
-        gridMenu.addAction(newGridAction)
+        self.gridMenu = self.myQMenuBar.addMenu('Grid')
+        self.newGridAction = QAction('New...', self)
+        self.newGridAction.triggered.connect(self.NewGrid)
+        self.gridMenu.addAction(self.newGridAction)
         # ---
-        openGridAction = QAction('Open...', self)
-        openGridAction.triggered.connect(self.OpenGrid)
-        gridMenu.addAction(openGridAction)
+        self.openGridAction = QAction('Open...', self)
+        self.openGridAction.triggered.connect(self.OpenGrid)
+        self.gridMenu.addAction(self.openGridAction)
         # ---
-        importGridAction = QAction('Import NetCDF...', self)
-        importGridAction.triggered.connect(self.ImportNetCDFGrid)
-        gridMenu.addAction(importGridAction)
+        self.importGridAction = QAction('Import NetCDF...', self)
+        self.importGridAction.triggered.connect(self.ImportNetCDFGrid)
+        self.gridMenu.addAction(self.importGridAction)
         # ---
-        gridMenu.addSeparator()
+        self.gridMenu.addSeparator()
         # ---
-        setConditionMenu= gridMenu.addMenu('Set conditions')
-        initialConditionAction = QAction('Initial...', self)
-        initialConditionAction.triggered.connect(self.printHello)
-        setConditionMenu.addAction(initialConditionAction)
+        self.setConditionMenu= self.gridMenu.addMenu('Set conditions')
+        self.initialConditionAction = QAction('Initial...', self)
+        self.initialConditionAction.triggered.connect(self.printHello)
+        self.setConditionMenu.addAction(self.initialConditionAction)
         # ---
-        openBoundaryConditionAction = QAction('Boundary...', self)
-        openBoundaryConditionAction.triggered.connect(self.printHello)
-        setConditionMenu.addAction(openBoundaryConditionAction)
+        self.openBoundaryConditionAction = QAction('Boundary...', self)
+        self.openBoundaryConditionAction.triggered.connect(self.printHello)
+        self.setConditionMenu.addAction(self.openBoundaryConditionAction)
         ### Sediment ################################
-        sedimentMenu = self.myQMenuBar.addMenu('Sediment')
-        newSedimentAction = QAction('New...', self)
-        newSedimentAction.triggered.connect(self.NewSediment)
-        sedimentMenu.addAction(newSedimentAction)
+        self.sedimentMenu = self.myQMenuBar.addMenu('Sediment')
+        self.newSedimentAction = QAction('New...', self)
+        self.newSedimentAction.triggered.connect(self.NewSediment)
+        self.sedimentMenu.addAction(self.newSedimentAction)
         # ---
-        openSedimentAction = QAction('Open...', self)
-        openSedimentAction.triggered.connect(self.OpenSediment)
-        sedimentMenu.addAction(openSedimentAction)
+        self.openSedimentAction = QAction('Open...', self)
+        self.openSedimentAction.triggered.connect(self.OpenSediment)
+        self.sedimentMenu.addAction(self.openSedimentAction)
         # ---
         ### Tools ################################
-        toolsMenu = self.myQMenuBar.addMenu('Tools')
-        picCellAction = QAction('Get I,J...', self)
-        picCellAction.triggered.connect(self.GetCellIJ)
-        toolsMenu.addAction(picCellAction)
+        self.toolsMenu = self.myQMenuBar.addMenu('Tools')
+        self.picCellAction = QAction('Get I,J...', self)
+        self.picCellAction.triggered.connect(self.GetCellIJ)
+        self.toolsMenu.addAction(self.picCellAction)
         # ---
-        openSedimentAction = QAction('Open...', self)
-        openSedimentAction.triggered.connect(self.OpenSediment)
-        toolsMenu.addAction(openSedimentAction)
+        self.openSedimentAction = QAction('Open...', self)
+        self.openSedimentAction.triggered.connect(self.OpenSediment)
+        self.toolsMenu.addAction(self.openSedimentAction)
         # ---
-        gridMenu.addSeparator()
+        self.gridMenu.addSeparator()
         # ---
         ### Mars ################################
-        marsMenu = self.myQMenuBar.addMenu('Mars')
-        importMarstAction = QAction('Import...', self)
-        importMarstAction.triggered.connect(self.ImportMarsResults)
-        marsMenu.addAction(importMarstAction)
+        self.marsMenu = self.myQMenuBar.addMenu('Mars')
+        self.importMarsAction = QAction('Import...', self)
+        self.importMarsAction.triggered.connect(self.ImportMarsResults)
+        self.marsMenu.addAction(self.importMarsAction)
 
         # TODO: define other menu entries from here
 
@@ -180,7 +179,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.projectOpened = False
         self.projectName = None
         self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
-        self.currentWorkingDIrectory = os.path.expanduser("~user") # Default value for working directory
+        self.currentWorkingDirectory = os.path.expanduser("~user") # Default value for working directory
 
         # Variables for mouse tracking events
         canvas = self.iface.mapCanvas()
@@ -202,11 +201,11 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.AnyFile)
-        dialog.setNameFilter("QCF project (*.qcf *.QCF)")  # This is the good one
+        dialog.setNameFilters(["QCF file (*.qcf *.QCF)","XML file (*.xml *.XML)","Other (*.txt *.TXT)"])  # This is the good one
         dialog.setWindowTitle("Create a new QCrocoFlow project")
         dialog.setViewMode(QFileDialog.Detail)
         if (dialog.exec()):
-            selectedFileName = dialog.selectedFiles()[0]  # Get the fisrt element of the returned list
+            selectedFileName = dialog.selectedFiles()[0]  # Get the first element of the returned list
             if os.path.isfile(selectedFileName):
                 ans = QMessageBox.information(self, "Project file exist", f"Do you want to overwrite {selectedFileName} ?", \
                             buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
@@ -216,7 +215,12 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.projectName = os.path.basename(selectedFileName)
             self.projectDirectory = os.path.dirname(selectedFileName)
             # TODO: manage creation of empty project file here
+            newProj = qcrocoflow_XML_Management(self)
+            newProj.InitializeRoot(selectedFileName)
+
             self.projectOpened = True
+            self.saveProjectAction.setEnabled(True)
+            self.saveAsProjectAction.setEnabled(True)
         else:
             QMessageBox.information(self, "Project file", "No QCrocoFlow project file created")
         return
