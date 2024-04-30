@@ -52,7 +52,7 @@ class qcrocoflow_XML_Management:
         root = ET.Element('Projects')
         root.append(self.NewProjectTree())
         tree = ET.ElementTree(root)
-        tree.write('testQCROCOFLOW.xml')
+        tree.write(os.path.join(os.path.dirname(_fullpathfilename),'testQCROCOFLOW.xml'))
 
     def NewProjectTree(self):
         project = ET.Element('Project')

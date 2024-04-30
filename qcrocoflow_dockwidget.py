@@ -201,7 +201,9 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.AnyFile)
-        dialog.setNameFilters(["QCF file (*.qcf *.QCF)","XML file (*.xml *.XML)","Other (*.txt *.TXT)"])  # This is the good one
+        dialog.setNameFilter("QCF project (*.qcf *.QCF)")  # This is the good one
+        dialog.setNameFilter("QCF project (*.txt *.TXT)")
+        dialog.setNameFilter("QCF project (*.xml *.XML)")  # Just for dev purpose -> TODO: eliminate asap
         dialog.setWindowTitle("Create a new QCrocoFlow project")
         dialog.setViewMode(QFileDialog.Detail)
         if (dialog.exec()):
@@ -234,6 +236,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         dialog.setFileMode(QFileDialog.ExistingFile)
         dialog.setNameFilter("QCF project (*.qcf *.QCF)") # This is the good one
         dialog.setNameFilter("QCF project (*.txt *.TXT)") # Just for dev purpose -> TODO: eliminate asap
+        dialog.setNameFilter("QCF project (*.xml *.XML)")
         dialog.setWindowTitle("Open QCrocoFlow existing project file")
         dialog.setViewMode(QFileDialog.Detail)
         if (dialog.exec()):
@@ -268,6 +271,8 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.projectDirectory = os.path.expanduser("~user")
             self.currentWorkingDIrectory = os.path.expanduser("~user")
             self.projectOpened = False
+            self.saveProjectAction.setEnabled(False)
+            self.saveAsProjectAction.setEnabled(False)
         return
 
     def WorkingDirectory(self) -> None:
