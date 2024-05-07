@@ -252,7 +252,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # TODO: manage import of project file here
             self.xmlProject = qcrocoflow_XML_Management(self)
             self.xmlProject.GetProjectSettings(selectedFileName)
-            self.messagelogTextEdit.append(self.xmlProject.PrintCurrentSettings())
+            self.messagelogTextEdit.append(self.xmlProject.PrintProjectSettings())
 
             self.projectOpened = True
             self.saveProjectAction.setEnabled(True)

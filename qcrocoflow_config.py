@@ -138,9 +138,11 @@ class qcrocoflow_XML_Management:
         self.root = tree.getroot()
         return self.root
 
-    def PrintCurrentSettings(self):
+    def PrintProjectSettings(self):
         assert self.root != None
         retValue = ''
         for child in self.root.iter():
-            retValue += f"{child.tag} {child.attrib}\n"
+            if child.tag == "Project":
+                retValue += "Project name: {}\nLocation: {}\n".format(child.attrib["Name"],child.attrib["CrocoDirectory"])
+                retValue += "from {} to {}\n".format(child.attrib["StartDate"],child.attrib["EndDate"])
         return retValue
