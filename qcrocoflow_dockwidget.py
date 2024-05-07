@@ -253,6 +253,10 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.xmlProject = qcrocoflow_XML_Management(self)
             self.xmlProject.GetProjectSettings(selectedFileName)
             self.messagelogTextEdit.append(self.xmlProject.PrintCurrentSettings())
+
+            self.projectOpened = True
+            self.saveProjectAction.setEnabled(True)
+            self.saveAsProjectAction.setEnabled(True)
         else:
             QMessageBox.information(self, "Project file", "No QCrocoFlow project file selected")
         return

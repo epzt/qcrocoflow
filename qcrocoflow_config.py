@@ -65,7 +65,7 @@ class qcrocoflow_XML_Management:
         tree = ET.ElementTree(self.root)
         dirpath = os.path.dirname(_fullpathfilename)
         tree.write(os.path.join(dirpath, dirpath.split()[-1]+'.xml'))
-        return root
+        return self.root
 
     #---------------------------------------
     # NewProjectTree
