@@ -176,15 +176,20 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
 
         # Variables
-        self.projectOpened = False
-        self.projectName = None
-        self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
-        self.currentWorkingDirectory = os.path.expanduser("~user") # Default value for working directory
+        self.SetToDefaultVariableValue('PROJECT')
 
         # Variables for mouse tracking events
         canvas = self.iface.mapCanvas()
         self.pointTool = QgsMapToolEmitPoint(canvas)
         self.pointTool.canvasClicked.connect(self.display_point)
+
+    def SetToDefaultVariableValue(self, _type):
+        if _type == 'PROJECT':
+            self.projectOpened = False
+            self.projectName = None
+            self.xmlProject = None
+            self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
+            self.currentWorkingDirectory = os.path.expanduser("~user")
 
     def display_point(self, pnt):
         QMessageBox.information(self.iface.mainWindow(), "Coordinate tracking", "x: {:.6f} - y: {:.6f}".format(pnt[0], pnt[1]))
@@ -200,25 +205,27 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             QMessageBox.warning(self, "Project file", f"The QCrocoFlow project {self.projectName} is currently opened.\nClose it before create a new one")
             return
         dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.AnyFile)
-        dialog.setNameFilter("QCF project (*.qcf *.QCF)")  # This is the good one
-        dialog.setNameFilter("QCF project (*.txt *.TXT)")
-        dialog.setNameFilter("QCF project (*.xml *.XML)")  # Just for dev purpose -> TODO: eliminate asap
-        dialog.setWindowTitle("Create a new QCrocoFlow project")
-        dialog.setViewMode(QFileDialog.Detail)
+        dialog.setOptions(QFileDialog.DontUseNativeDialog)
+        dialog.setFileMode(QFileDialog.DirectoryOnly)
+        dialog.setOption(QFileDialog.ShowDirsOnly)
+        dialog.setWindowTitle("Select an existing CROCO directory")
+        # dialog.setViewMode(QFileDialog.List)
         if (dialog.exec()):
-            selectedFileName = dialog.selectedFiles()[0]  # Get the first element of the returned list
-            if os.path.isfile(selectedFileName):
-                ans = QMessageBox.information(self, "Project file exist", f"Do you want to overwrite {selectedFileName} ?", \
+            selectedDir = dialog.directory()  # Get the first element of the returned list
+            xmlFileName = os.path.basename(selectedDir.absolutePath())+'.xml'
+            selectedFullPathFileName = os.path.join(selectedDir.absolutePath(), 'QGIS', xmlFileName)
+            if os.path.isfile(selectedFullPathFileName):
+                ans = QMessageBox.information(self, "Project file exist", f"Do you want to overwrite {selectedFullPathFileName} ?", \
                             buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
                              defaultButton = QMessageBox.StandardButton.Cancel)
                 if ans == QMessageBox.StandardButton.Cancel:
                     return
-            self.projectName = os.path.basename(selectedFileName)
-            self.projectDirectory = os.path.dirname(selectedFileName)
+            QMessageBox.information(self, "Project", f"{selectedFullPathFileName}")
+            self.projectName = xmlFileName.split('.')[0]
+            self.projectDirectory = selectedDir
             # TODO: manage creation of empty project file here
-            newProj = qcrocoflow_XML_Management(self)
-            newProj.InitializeRoot(selectedFileName)
+            self.xmlProject = qcrocoflow_XML_Management(self)
+            self.xmlProject.InitializeRoot(selectedFullPathFileName)
 
             self.projectOpened = True
             self.saveProjectAction.setEnabled(True)
@@ -234,17 +241,18 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setNameFilter("QCF project (*.qcf *.QCF)") # This is the good one
-        dialog.setNameFilter("QCF project (*.txt *.TXT)") # Just for dev purpose -> TODO: eliminate asap
         dialog.setNameFilter("QCF project (*.xml *.XML)")
         dialog.setWindowTitle("Open QCrocoFlow existing project file")
         dialog.setViewMode(QFileDialog.Detail)
         if (dialog.exec()):
-            selectedFileName = dialog.selectedFiles()[0] # Get the fisrt element of the returned list
+            selectedFileName = dialog.selectedFiles()[0] # Get the first element of the returned list
             self.projectName = os.path.basename(selectedFileName)
             self.projectDirectory = os.path.dirname(selectedFileName)
             self.projectOpened = True
             # TODO: manage import of project file here
+            self.xmlProject = qcrocoflow_XML_Management(self)
+            self.xmlProject.GetProjectSettings(selectedFileName)
+            self.messagelogTextEdit.append(self.xmlProject.PrintCurrentSettings())
         else:
             QMessageBox.information(self, "Project file", "No QCrocoFlow project file selected")
         return
@@ -267,10 +275,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                              defaultButton = QMessageBox.StandardButton.No)
         if ans == QMessageBox.StandardButton.Yes:
             # TODO: manage cleanup variables here
-            self.projectName = None
-            self.projectDirectory = os.path.expanduser("~user")
-            self.currentWorkingDIrectory = os.path.expanduser("~user")
-            self.projectOpened = False
+            self.SetToDefaultVariableValue('PROJECT')
             self.saveProjectAction.setEnabled(False)
             self.saveAsProjectAction.setEnabled(False)
         return
@@ -360,6 +365,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 return
             self.AddNetCDFVariablesToMapset(ncFile, varsDict, coordsDict)
         return
+
     def AddNetCDFVariablesToMapset(self, _file: str, _varsDict: dict, _coordsDict: dict) -> None:
     # Add a raster to the current mapset based on a variable from a netCDF file
         try:

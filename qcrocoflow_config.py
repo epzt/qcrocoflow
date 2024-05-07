@@ -29,37 +29,60 @@ import os
 from PyQt5.QtWidgets import QDialog, QCheckBox, QGridLayout, QStackedWidget, QVBoxLayout, QWidget, QMessageBox, QFileDialog
 
 # Seconds since 01-01-1900
-DELTASECONDSREFS = datetime(1900,1,1,tzinfo=timezone.utc).timestamp()
+DELTASECONDSCENTURYREFS = datetime(1900,1,1,tzinfo=timezone.utc).timestamp()
 # Default geodetic system of CROCO netCDF files
 EPSGWGS84 = "EPSG:4326"
 # Lower limit of ratio for sequenceMatcher function of difflib
 DEFAULTRATIO = 0.6
 
 #---------------------------------------
-# qcrocoflow_XML_Management: manage XML file of project configurations
-#
+# qcrocoflow_XML_Management
+# manage XML project files of configurations
+# - arguments -
+# _parent: pointer to a dialog based class (normally the main application)
 #---------------------------------------
 class qcrocoflow_XML_Management:
     def __init__(self, _parent):
         self.mainApp = _parent
+        self.root = None
 
+    #---------------------------------------
+    # InitializeRoot
+    # Create a new empty XML project file.
+    # -Arguments -
+    # _fullpathfilename : the full path and name of the newly created XML file
+    # - Returns -
+    # Root pointer to the newly created tree
+    #---------------------------------------
     def InitializeRoot(self, _fullpathfilename):
         if os.path.exists(_fullpathfilename):
             if QMessageBox.information(self.mainApp, "Over right", f"File {os.path.basename(_fullpathfilename)} exists\nDo you want to earse it ?", \
                                     buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
                                     defaultButton = QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Cancel:
                 return
-        root = ET.Element('Projects')
-        root.append(self.NewProjectTree())
-        tree = ET.ElementTree(root)
-        tree.write(os.path.join(os.path.dirname(_fullpathfilename),'testQCROCOFLOW.xml'))
+        self.root = ET.Element('Projects')
+        self.root.append(self.NewProjectTree(os.path.basename(_fullpathfilename)))
+        tree = ET.ElementTree(self.root)
+        dirpath = os.path.dirname(_fullpathfilename)
+        tree.write(os.path.join(dirpath, dirpath.split()[-1]+'.xml'))
+        return root
 
-    def NewProjectTree(self):
+    #---------------------------------------
+    # NewProjectTree
+    # Create an empty tree (elements) of the project file
+    # this function is able to evolve due to new parameters managed
+    # - Arguments -
+    # _projectName: name of the new project to insert
+    # - Returns -
+    # an empty project tree
+    #---------------------------------------
+    def NewProjectTree(self, _projectName):
         project = ET.Element('Project')
-        project.set('Name','')
+        project.set('Name', _projectName)
         project.set('WorkingDirectory','')
         project.set('CrocoDirectory','')
         project.set('StartDate','')
+        project.set('EndDate', '')
         # --
         grid = ET.SubElement(project, 'Grid')
         coords = ET.SubElement(grid, 'Coords')
@@ -95,3 +118,29 @@ class qcrocoflow_XML_Management:
         sediment.set('InitialName', '')
         sediment.set('Directory', '')
         return project
+
+    # ---------------------------------------
+    # UpdateElement
+    # Update an element or attribut of the tree if exist otherwise create it
+    # Elements or attributs are found base on the parent (_parent)
+    # - Arguments -
+    # _parent: name of the parent of the element or attribut
+    # _object: name of the element or attribut to update/create (if not exist)
+    # - Returns -
+    # Return True or False
+    # ---------------------------------------
+    def UpdateElement(self, _parent, _object) -> bool:
+        return True
+
+    def GetProjectSettings(self, _fullpathfilename):
+        # TODO: check if file exist and everything goes fine
+        tree = ET.parse(_fullpathfilename)
+        self.root = tree.getroot()
+        return self.root
+
+    def PrintCurrentSettings(self):
+        assert self.root != None
+        retValue = ''
+        for child in self.root.iter():
+            retValue += f"{child.tag} {child.attrib}\n"
+        return retValue
