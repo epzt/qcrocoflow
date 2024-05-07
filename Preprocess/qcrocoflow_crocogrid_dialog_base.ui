@@ -66,7 +66,7 @@
       <enum>QTabWidget::West</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_6">
       <attribute name="title">
@@ -371,7 +371,7 @@
          <rect>
           <x>10</x>
           <y>30</y>
-          <width>159</width>
+          <width>161</width>
           <height>26</height>
          </rect>
         </property>
@@ -405,7 +405,7 @@
         <rect>
          <x>11</x>
          <y>21</y>
-         <width>224</width>
+         <width>238</width>
          <height>55</height>
         </rect>
        </property>
@@ -1453,8 +1453,14 @@ based on ERA5 model</string>
      <height>25</height>
     </rect>
    </property>
+   <property name="font">
+    <font>
+     <family>DejaVu Sans</family>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
    <property name="text">
-    <string>CLOSE</string>
+    <string>Close</string>
    </property>
   </widget>
  </widget>
