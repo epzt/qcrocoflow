@@ -54,17 +54,16 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # Root pointer to the newly created tree
     #---------------------------------------
-    def InitializeRoot(self, _fullpathfilename):
+    def InitXMLFileProject(self, _fullpathfilename):
         if os.path.exists(_fullpathfilename):
-            if QMessageBox.information(self.mainApp, "Over right", f"File {os.path.basename(_fullpathfilename)} exists\nDo you want to earse it ?", \
+            if QMessageBox.information(self.mainApp, "Overright", f"File {os.path.basename(_fullpathfilename)} exists\nDo you want to erase it ?", \
                                     buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
                                     defaultButton = QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Cancel:
                 return
         self.root = ET.Element('Projects')
         self.root.append(self.NewProjectTree(os.path.basename(_fullpathfilename)))
         tree = ET.ElementTree(self.root)
-        dirpath = os.path.dirname(_fullpathfilename)
-        tree.write(os.path.join(dirpath, dirpath.split()[-1]+'.xml'))
+        tree.write(_fullpathfilename)
         return self.root
 
     #---------------------------------------
@@ -78,7 +77,7 @@ class qcrocoflow_XML_Management:
     #---------------------------------------
     def NewProjectTree(self, _projectName):
         project = ET.Element('Project')
-        project.set('Name', _projectName)
+        project.set('ProjectName', _projectName)
         project.set('WorkingDirectory','')
         project.set('CrocoDirectory','')
         project.set('StartDate','')
@@ -126,10 +125,16 @@ class qcrocoflow_XML_Management:
     # - Arguments -
     # _parent: name of the parent of the element or attribut
     # _object: name of the element or attribut to update/create (if not exist)
+    # _value: new value of the _object
     # - Returns -
     # Return True or False
     # ---------------------------------------
-    def UpdateElement(self, _parent, _object) -> bool:
+    def UpdateElement(self, _parent, _object, _value=None) -> bool:
+        # A project must be openned
+        if self.root == None:
+            QMessageBox(self.mainApp, "No project openned", "No project openned yet")
+            return False
+
         return True
 
     def GetProjectSettings(self, _fullpathfilename):
@@ -143,6 +148,14 @@ class qcrocoflow_XML_Management:
         retValue = ''
         for child in self.root.iter():
             if child.tag == "Project":
-                retValue += "Project name: {}\nLocation: {}\n".format(child.attrib["Name"],child.attrib["CrocoDirectory"])
-                retValue += "from {} to {}\n".format(child.attrib["StartDate"],child.attrib["EndDate"])
+                if child.attrib["CrocoDirectory"] == "":
+                    retValue += "Project name: {}<br>Location: {}".format(child.attrib["ProjectName"],"None defined")
+                else:
+                    retValue += "Project name: {}<br>>Location: {}".format(child.attrib["ProjectName"],child.attrib["CrocoDirectory"])
+                if child.attrib["StartDate"] == "":
+                    retValue += "<br>No start date defined"
+                if child.attrib["EndDate"] == "":
+                    retValue += "<br>No end date defined"
+                if child.attrib["StartDate"] != "" and child.attrib["EndDate"] != "":
+                    retValue += "<br>from {} to {}".format(child.attrib["StartDate"],child.attrib["EndDate"])
         return retValue

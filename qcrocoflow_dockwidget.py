@@ -109,14 +109,8 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # ---
         self.projectMenu.addSeparator()
         # ---
-        self.globalSettingsMenu = self.projectMenu.addMenu('Settings')
-        self.workingDirectoryAction = QAction(' Set working directory...', self)
-        self.workingDirectoryAction.triggered.connect(self.WorkingDirectory)
-        self.globalSettingsMenu.addAction(self.workingDirectoryAction)
-        # ---
-        self.projectMenu.addSeparator()
-        # ---
         self.closeProjectAction = QAction('Close', self)
+        self.closeProjectAction.setEnabled(False)
         self.closeProjectAction.triggered.connect(self.CloseProject)
         self.projectMenu.addAction(self.closeProjectAction)
         ### Grid ################################
@@ -200,7 +194,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         print('Hello')
 
     def NewProject(self) -> None:
-    # Create a new empty QCrocoFlow project
+        # Create a new empty QCrocoFlow project
         if self.projectOpened and self.projectName:
             QMessageBox.warning(self, "Project file", f"The QCrocoFlow project {self.projectName} is currently opened.\nClose it before create a new one")
             return
@@ -208,12 +202,12 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         dialog.setOptions(QFileDialog.DontUseNativeDialog)
         dialog.setFileMode(QFileDialog.DirectoryOnly)
         dialog.setOption(QFileDialog.ShowDirsOnly)
-        dialog.setWindowTitle("Select an existing CROCO directory")
+        dialog.setWindowTitle("Select a directory")
         # dialog.setViewMode(QFileDialog.List)
         if (dialog.exec()):
             selectedDir = dialog.directory()  # Get the first element of the returned list
-            xmlFileName = os.path.basename(selectedDir.absolutePath())+'.xml'
-            selectedFullPathFileName = os.path.join(selectedDir.absolutePath(), 'QGIS', xmlFileName)
+            xmlFileName = 'qcfqgis.xml'
+            selectedFullPathFileName = os.path.join(selectedDir.absolutePath(), xmlFileName)
             if os.path.isfile(selectedFullPathFileName):
                 ans = QMessageBox.information(self, "Project file exist", f"Do you want to overwrite {selectedFullPathFileName} ?", \
                             buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
@@ -223,13 +217,15 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             QMessageBox.information(self, "Project", f"{selectedFullPathFileName}")
             self.projectName = xmlFileName.split('.')[0]
             self.projectDirectory = selectedDir
+            self.currentWorkingDIrectory = selectedDir
             # TODO: manage creation of empty project file here
             self.xmlProject = qcrocoflow_XML_Management(self)
-            self.xmlProject.InitializeRoot(selectedFullPathFileName)
+            self.xmlProject.InitXMLFileProject(selectedFullPathFileName)
 
             self.projectOpened = True
             self.saveProjectAction.setEnabled(True)
             self.saveAsProjectAction.setEnabled(True)
+            self.closeProjectAction.setEnabled(True)
         else:
             QMessageBox.information(self, "Project file", "No QCrocoFlow project file created")
         return
@@ -248,15 +244,17 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             selectedFileName = dialog.selectedFiles()[0] # Get the first element of the returned list
             self.projectName = os.path.basename(selectedFileName)
             self.projectDirectory = os.path.dirname(selectedFileName)
+            self.currentWorkingDIrectory  = os.path.dirname(selectedFileName)
             self.projectOpened = True
             # TODO: manage import of project file here
             self.xmlProject = qcrocoflow_XML_Management(self)
             self.xmlProject.GetProjectSettings(selectedFileName)
-            self.messagelogTextEdit.append(self.xmlProject.PrintProjectSettings())
+            self.add_message(self.xmlProject.PrintProjectSettings(), "green")
 
             self.projectOpened = True
             self.saveProjectAction.setEnabled(True)
             self.saveAsProjectAction.setEnabled(True)
+            self.closeProjectAction.setEnabled(True)
         else:
             QMessageBox.information(self, "Project file", "No QCrocoFlow project file selected")
         return
@@ -279,20 +277,16 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                              defaultButton = QMessageBox.StandardButton.No)
         if ans == QMessageBox.StandardButton.Yes:
             # TODO: manage cleanup variables here
+            self.messagelogTextEdit.clear()
+            self.add_message("Project {} closed.".format(self.projectName), "red")
             self.SetToDefaultVariableValue('PROJECT')
             self.saveProjectAction.setEnabled(False)
             self.saveAsProjectAction.setEnabled(False)
+            self.closeProjectAction.setEnabled(False)
+            self.projectDirectory = ""
+            self.currentWorkingDIrectory = ""
         return
 
-    def WorkingDirectory(self) -> None:
-        wkDir = QFileDialog.getExistingDirectory(self, "Select a working directory", self.projectDirectory,\
-                                                 QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
-        if not wkDir:
-            QMessageBox.information(self, "Set working directory", f"No new working directory\nCurrent working directory is {self.currentWorkingDIrectory}")
-            return
-        self.currentWorkingDIrectory = wkDir
-        self.iface.messageBar().pushMessage("New working directory selected", f"{self.currentWorkingDIrectory}", level=Qgis.Info)
-        return
     def NewGrid(self) -> None:
     # Creation of a new grid
         self.grdDlg = qcrocoflow_crocogridDialog(self.iface, parent=self)
@@ -487,7 +481,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def add_message(self, message, color='black'):
         now = datetime.now()
         timestamp = now.strftime("%H:%M:%S")
-        colored_message = f"<font color='{color}'>{timestamp}: {message}</font>"
+        colored_message = f"<font color='{color}'>{timestamp}:<br>{message}</font>"
         self.messagelogTextEdit.append(colored_message)
 
 
