@@ -47,27 +47,27 @@ class qcrocoflow_XML_Management:
         self.root = None
 
     #---------------------------------------
-    # InitializeRoot
+    # init_xml_file_project
     # Create a new empty XML project file.
     # -Arguments -
     # _fullpathfilename : the full path and name of the newly created XML file
     # - Returns -
     # Root pointer to the newly created tree
     #---------------------------------------
-    def InitXMLFileProject(self, _fullpathfilename):
+    def init_xml_file_project(self, _fullpathfilename):
         if os.path.exists(_fullpathfilename):
             if QMessageBox.information(self.mainApp, "Overright", f"File {os.path.basename(_fullpathfilename)} exists\nDo you want to erase it ?", \
                                     buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
                                     defaultButton = QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Cancel:
                 return
         self.root = ET.Element('Projects')
-        self.root.append(self.NewProjectTree(os.path.basename(_fullpathfilename)))
+        self.root.append(self.new_project_tree(os.path.basename(_fullpathfilename)))
         tree = ET.ElementTree(self.root)
         tree.write(_fullpathfilename)
         return self.root
 
     #---------------------------------------
-    # NewProjectTree
+    # new_project_tree
     # Create an empty tree (elements) of the project file
     # this function is able to evolve due to new parameters managed
     # - Arguments -
@@ -75,7 +75,7 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # an empty project tree
     #---------------------------------------
-    def NewProjectTree(self, _projectName):
+    def new_project_tree(self, _projectName):
         project = ET.Element('Project')
         project.set('ProjectName', _projectName)
         project.set('WorkingDirectory','')
@@ -119,7 +119,7 @@ class qcrocoflow_XML_Management:
         return project
 
     # ---------------------------------------
-    # UpdateElement
+    # update_element
     # Update an element or attribut of the tree if exist otherwise create it
     # Elements or attributs are found base on the parent (_parent)
     # - Arguments -
@@ -129,21 +129,23 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # Return True or False
     # ---------------------------------------
-    def UpdateElement(self, _parent, _object, _value=None) -> bool:
+    def update_element(self, _parent, _object, _value=None) -> bool:
         # A project must be openned
         if self.root == None:
-            QMessageBox(self.mainApp, "No project openned", "No project openned yet")
+            QMessageBox.critical(self.mainApp, "No project openned", "No project openned yet")
             return False
 
         return True
 
-    def GetProjectSettings(self, _fullpathfilename):
-        # TODO: check if file exist and everything goes fine
+    def get_project_settings(self, _fullpathfilename):
+        if not os.path.exists(_fullpathfilename):
+            QMessageBox.critical(self.mainApp, "No project file", "Can not found {}".format(_fullpathfilename))
+            return
         tree = ET.parse(_fullpathfilename)
         self.root = tree.getroot()
         return self.root
 
-    def PrintProjectSettings(self):
+    def print_project_settings(self):
         assert self.root != None
         retValue = ''
         for child in self.root.iter():
