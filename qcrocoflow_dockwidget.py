@@ -61,20 +61,20 @@ import netCDF4 as nc
 import datetime
 
 from .qcrocoflow_croco2qgis import qcrocoflowCROCO2QGIS
-from .qcrocoflow_qcrocotools import netCDFtoRaster
+from .qcrocoflow_croco_tools import qcrocoflow_crocotools_netCDFtoRaster
 from .qcrocoflow_config import *
-from .Preprocess.qcrocoflow_crocogrid_dialog import *
+from .Preprocess.Grid.qcrocoflow_croco_grid_dialog import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_dockwidget_base.ui'))
 
-class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
 
     def __init__(self, _iface, parent=None):
         """Constructor."""
-        super(qcrocoflowDockWidget, self).__init__(parent)
+        super(qcrocoflow_DockWidget, self).__init__(parent)
         # Set up the user interface from Designer.
         # After setupUI you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see
@@ -295,7 +295,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def new_grid(self) -> None:
     # Creation of a new grid
-        self.grdDlg = qcrocoflow_crocogridDialog(self.iface, parent=self)
+        self.grdDlg = qcrocoflow_croco_grid_dialog(self.iface, parent=self)
         self.grdDlg.show()
         return
 
@@ -381,7 +381,7 @@ class qcrocoflowDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Get an existing group layer or define a new one into which add the raster layer(s)
         current_grp = self.define_group4_layer(_file)
         # Initialisation of object that will convert netCDF variables to raster layer SRC: WGS84 by default
-        nc2r = netCDFtoRaster(QgsCoordinateReferenceSystem(EPSGWGS84))
+        nc2r = qcrocoflow_crocotools_netCDFtoRaster(QgsCoordinateReferenceSystem(EPSGWGS84))
 
         for k in _vars_dict.keys():
             # Get the path of actual _file localisation and add the name of the file without its extension

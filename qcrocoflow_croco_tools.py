@@ -180,7 +180,7 @@ def GetLastDateIndex(_nctime, _end) -> tuple:
             return i
     return len(_nctime) - 1
 
-class netcdfVariablesDlg(QDialog):
+class qcrocoflow_croco_tools_netcdfVariablesDlg(QDialog):
     """ Claas to manage dialog variables located in a netCDF file """
     def __init__(self, _variables):
         super(QDialog, self).__init__()
@@ -207,13 +207,13 @@ class netcdfVariablesDlg(QDialog):
                 retvarlistname.append(chkbox.text())
         return retvarlistname
 
-class netCDFtoRaster():
+class qcrocoflow_crocotools_netCDFtoRaster():
 # Class to manage rasters/grids from a netCDF file
     def __init__(self, _crs):
         self.CRS = _crs
 
     def createRaster(self, _x:np.array, _y:np.array, _array:np.array, _varname:str, _dim:int) -> tuple:
-    # Create a raster from a variable located in a netCDF file
+        # Create a raster from a variable located in a netCDF file
         # creating a constant raster which will be overwritten later
         extent = QgsRectangle()
         extent.setXMinimum(np.nanmin(_x[0,:]))
