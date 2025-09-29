@@ -21,7 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-
+import sys
 # Built-in module
 from datetime import datetime
 import numpy as np
@@ -50,26 +50,32 @@ from .qcrocoflow_croco_grid import qcrocoflow_croco_grid
 from ..Bulk.qcrocoflow_croco_ERA5 import qcrocoflow_croco_ERA5
 from ..Tides.qcrocoflow_croco_tides import qcrocoflow_qcroco_tides
 from ..Bulk.qcrocoflow_croco_bulk import qcrocoflow_croc_bulk
-from ..Ini.qcrocoflow_create_ini_file import qcrocoflow_CreateIniFile, qcrocoflow_Copernicus
+from ..Ini.qcrocoflow_croco_ini_file_dialog import qcrocoflow_CreateIniFile, qcrocoflow_Copernicus
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qcrocoflow_croco_grid_dialog_base.ui'))
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'qcrocoflow_croco_grid_dialog_base.ui'))
 
 class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
 #"class"
-    def __init__(self, iface, parent=None):
+    def __init__(self, _iface, _parent=None):
         """Constructor."""
-        super(qcrocoflow_croco_grid_dialog, self).__init__(parent)
-        self.era5_path = None
-        self.directory = ""
-        self.iface = iface
-        self.parent = parent
+        super(qcrocoflow_croco_grid_dialog, self).__init__(_parent)
+        self.iface = _iface
+        self.parent = _parent
         self.setupUi(self)
+
+        if self.parent != None:
+            self.current_config = self.parent.get_project_config() # Get object containing configuration settings
+        else:
+            self.current_config = None
+
+        self.bulk_data_path = None
+        self.working_directory = ""
         self.load_topography_files()
         self.load_TPXO_path()
-        self.Environnement_2.setToolTip("Bonjour")
         self.connect_signals_and_slots()
         #init Grid
+        self.grdname = None
+        self.directory = None
         self.titre = ""
         self.grid_layer = None
         self.selected_extent = None
@@ -89,20 +95,7 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         # Init intialisation
         self.PlotSCoordinatesGraphics()
         #initTides
-        self.ROMSnames = self.create_ROMSnames_list()
-        self.m2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.n2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.k2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.k1checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.o1checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.p1checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.q1checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.mmcheckBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.mfcheckBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.m4checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.mn4checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.ms4checkBox.stateChanged.connect(self.on_checkBox_state_changed)
-        self.s2checkBox.stateChanged.connect(self.on_checkBox_state_changed)
+        self.tide_harmonics = {}
 
         # Initialisation file parameters
         self.verticalLayersSpinBox.valueChanged.connect(self.PlotSCoordinatesGraphics)
@@ -121,43 +114,25 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         self.db.setDatabaseName(self.db_path)
         if not self.db.open():
             QMessageBox.critical(self, "Database Error", self.db.lastError().text())
-        self.load_projects()
-        self.selecttopoComboBox.currentIndexChanged.connect(self.select_bathymetry_file_from_combobox)
 
     #BATHYMETRIE
     def load_topography_files(self):
         settings = QgsSettings()
         files = settings.value("/topography_files", [])
         self.topography_files = files if files else []
-        self.update_topography_combobox()
 
     def save_topography_files(self):
         settings = QgsSettings()
         settings.setValue("/topography_files", self.topography_files)
-
-    def update_topography_combobox(self):
-        # Try to disconnect the signal
-        try:
-            self.selecttopoComboBox.currentIndexChanged.disconnect()
-        except TypeError:
-            pass
-        # Update the combobox
-        self.selecttopoComboBox.clear()
-        self.selecttopoComboBox.addItems(self.topography_files)
-        # Reconnect the signal
-        self.selecttopoComboBox.currentIndexChanged.connect(self.select_bathymetry_file_from_combobox)
 
     ###############################################################################################
     #                            CONNECT BUTTON TO FONCTION                                           #
     ###############################################################################################
 
     def connect_signals_and_slots(self):
-        self.selectenvButton.clicked.connect(self.select_work_environment_directory)
-        self.gridprojecttitleLineEdit.textChanged.connect(self.on_gridprojecttitle_text_changed)
-        self.gridnameLineEdit.textChanged.connect(self.on_gridname_text_changed)
+
         self.dlDoubleSpin.editingFinished.connect(self.on_dl_b_text_changed)
         self.selecttopoButton.clicked.connect(self.select_topography_file)
-        self.savevariablesButton.clicked.connect(self.save_variables_to_file)
         self.selectzoneButton.clicked.connect(self.select_zone)
         self.lonminLineEdit.textChanged.connect(self.update_grid)
         self.lonmaxLineEdit.textChanged.connect(self.update_grid)
@@ -167,8 +142,6 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         self.dmButton.clicked.connect(self.update_coordinates_DM)
         self.dmsButton.clicked.connect(self.update_coordinates_DMS)
         self.gridexecuteButton.clicked.connect(self.on_execute_grid)
-        self.selecttopoComboBox.currentIndexChanged.connect(self.select_bathymetry_file_from_combobox)
-        self.opengridprojectComboBox.currentIndexChanged.connect(self.update_variables)
         #dates
         self.datestart.dateChanged.connect(self.on_date_changed)
         self.dateend.dateChanged.connect(self.on_date_changed)
@@ -219,29 +192,19 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
     #                           DEFINE WORKPLACE                                              #
     ###############################################################################################
 
-    def select_work_environment_directory(self):
-        """
-        Function to open a dialog to select a directory for the working environment.
-        """
-        directory = QFileDialog.getExistingDirectory(self, "Select Environment Directory")
-        # If a directory is selected
-        if directory:
-            # Update label with the directory
-            self.Environnement_2.setText(directory)
-            # Save the directory
-            self.directory = directory
-            # Add a message to the parent console
-            self.parent.add_message("Le chemin d'accès est : " + directory, color='blue')
-
-    ###############################################################################################
-    #                            SELECT TITLE PROJECT                                           #
-    ###############################################################################################
-
-    def on_gridprojecttitle_text_changed(self, text):
-        """
-        Function to update 'titre' when the text in the 'gridprojecttitle' text box changes.
-        """
-        self.titre = text
+    # def select_work_environment_directory(self):
+    #     """
+    #     Function to open a dialog to select a directory for the working environment.
+    #     """
+    #     directory = QFileDialog.getExistingDirectory(self, "Select Environment Directory")
+    #     # If a directory is selected
+    #     if directory:
+    #         # Update label with the directory
+    #         self.Environnement_2.setText(directory)
+    #         # Save the directory
+    #         self.directory = directory
+    #         # Add a message to the parent console
+    #         self.parent.add_message("Le chemin d'accès est : " + directory, color='blue')
 
     ###############################################################################################
     #                              Grid Name                                                      #
@@ -306,7 +269,6 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         its extension is either 'grd' or 'tif'.
         """
         if file_name:
-            self.topodirLineEdit.setText(file_name)
             self.topo = file_name
             self.parent.add_message("Topography file:" + self.topo, color='blue')
 
@@ -344,18 +306,6 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
                 self.topography_files.append(file_name)
                 self.save_topography_files()
                 self.update_topography_combobox()
-
-    # ------------------------------------------------------------------#
-
-    def select_bathymetry_file_from_combobox(self):
-        """
-        This function loads a topography file selected from the 'selecttopoComboBox'
-        into the project.
-        """
-        file_name = self.selecttopoComboBox.currentText()
-
-        if file_name:
-            self.load_topography_file(file_name)
 
     ###############################################################################################
     #                          Select zone                                                        #
@@ -703,22 +653,22 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         }
 
         # Create a list to hold the names of selected harmonics
-        self.ROMSnames = []
+        self.tide_harmonics = []
         # Iterate over the dictionary
         for harmonic, checkBox in harmonics_checkBoxes.items():
             # If the checkBox is checked, add the harmonic name to the list
             if checkBox.isChecked():
-                self.ROMSnames.append(harmonic)
-        print(self.ROMSnames)
+                self.tide_harmonics.append(harmonic)
+        print(self.tide_harmonics)
         # Return the list of selected harmonics
-        return self.ROMSnames
+        return self.tide_harmonics
      # ------------------------------------------------------------------#
     def on_checkBox_state_changed(self):
         """
         This function is a handler for when the state of the checkboxes changes. It updates the
         list of selected harmonics by calling the 'create_ROMSnames_list' function.
         """
-        self.ROMSnames = self.create_ROMSnames_list()
+        self.tide_harmonics = self.create_ROMSnames_list()
 
      # ------------------------------------------------------------------#
 
@@ -742,12 +692,12 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         date_max = self.dateend.date()
         # Calculate the number of days between self.date_min and self.date_max
         lengthSim = date_min.daysTo(date_max)
-        harmoniques = self.ROMSnames
+        harmoniques = self.tide_harmonics
         croco_grd = self.grdname_full_path
         TPXO_path = self.TPXO_path
-        grdname = self.gridnameLineEdit.text()
-        directory = self.directory
-        qcrocoflow_croc_bulk.make_tides_script(TPXO_path, croco_grd, harmoniques, lengthSim, date_min_datetime, grdname,directory)
+
+        #TODO: regarder ic le fait que cette fonction retourne et reçoit directory !!!
+        self.directory = qcrocoflow_croc_bulk.make_tides_script(TPXO_path, croco_grd, harmoniques, lengthSim, date_min_datetime, self.grdname, self.directory)
 
     ###############################################################################################
     #                                          BULK                                               #
@@ -785,159 +735,71 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         and calls the 'ERA5_request_script' function with these parameters.
         """
         # Fetch the required parameters from the UI
-        directory = self.Environnement_2.text()
-        title = self.gridprojecttitleLineEdit.text()
-        grdname = self.gridnameLineEdit.text() + '.nc'
         lon_min = float(self.lon_min)
         lon_max = float(self.lon_max)
         lat_min = float(self.lat_min)
         lat_max = float(self.lat_max)
-        Ymax = self.Ymax
-        Ymin = self.Ymin
-        Mmax = self.Mmax
-        Mmin = self.Mmin
         # Call the ERA5 request script with the fetched parameters
-        qcrocoflow_croco_ERA5.ERA5_request_script(title, lon_min, lon_max, lat_min, lat_max, directory, Ymin, Ymax, Mmin, Mmax)
+        qcrocoflow_croco_ERA5.ERA5_request_script(self.titre, lon_min, lon_max, lat_min, lat_max, self.directory, self.Ymin, self.Ymax, self.Mmin, self.Mmax)
     # ------------------------------------------------------------------#
     def select_ERA5_file(self):
         """
         This function allows the user to select a directory that contains the ERA5 model files.
         """
         directory_path = QFileDialog.getExistingDirectory(self, "Select directory")
-        self.era5_path = directory_path
+        self.bulk_data_path = directory_path
     def on_execute_Bulk(self):
-        era5_dir = self.era5_path
+        '''
+        era5_dir = self.bulk_data_path
         y_max = self.Ymax
         y_min = self.Ymin
         title = self.titre
         d_min = self.Dmin
         m_min = self.Mmin
         m_max = self.Mmax
-        grid_dir = self.directory
-        grdname = self.grdname_full_path
+        '''
+        grid_dir = ""
+        self.grdname = self.grdname_full_path
         mo_min = self.Mmin
         y_orig = 2000
-        directory = self.directory
-        main(era5_dir, m_min, grid_dir, title, grdname, d_min, directory)
-    ###############################################################################################
-    #                                    Save Variable                                            #
-    ###############################################################################################
-
-    def save_variables_to_file(self):
-        directory = self.Environnement_2.text()
-        title = self.gridprojecttitleLineEdit.text()
-        grdname = self.gridnameLineEdit.text()
-        dl = self.dlDoubleSpin.text()
-        topo = self.topodirLineEdit.text()
-        lat_min = self.latminLineEdit.text()
-        lat_max = self.latmaxLineEdit.text()
-        lon_min = self.lonminLineEdit.text()
-        lon_max = self.lonmaxLineEdit.text()
-        if not self.titre:
-            QMessageBox.warning(self, "Warning", "Il manque la variable: titre")
-            return
-        if not directory:
-            QMessageBox.warning(self, "Warning", "Il manque la variable: environment_directory")
-            return
-        if not grdname:
-            QMessageBox.warning(self, "Warning", "Il manque la variable: grdname")
-            return
-
-        ###############################################################################################
-        #                                  Create SQL                                                 #
-        ###############################################################################################
-
-        # Create and configure the database
-        db = QSqlDatabase.addDatabase('QSQLITE')
-        db.setDatabaseName(self.db_path)
-
-        if not db.open():
-            QMessageBox.critical(self, "Database Error", db.lastError().text())
-            return
-
-        query = QSqlQuery()
-
-        sql = """
-                CREATE TABLE IF NOT EXISTS Grid (
-                    title TEXT PRIMARY KEY,
-                    directory TEXT,
-                    grdname TEXT,
-                    dl REAL,
-                    topo TEXT,
-                    lat_min REAL,
-                    lat_max REAL,
-                    lon_min REAL,
-                    lon_max REAL
-                )
-                """
-
-        if not query.exec_(sql):
-            QMessageBox.critical(self, "Database Error", query.lastError().text())
-            return
-
-        sql = """
-                INSERT OR REPLACE INTO Grid 
-                (title, directory, grdname, dl, topo, lat_min, lat_max, lon_min, lon_max)
-                VALUES 
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """
-
-        query.prepare(sql)
-        query.addBindValue(title)
-        query.addBindValue(directory)
-        query.addBindValue(grdname)
-        query.addBindValue(dl)
-
-        query.addBindValue(topo)
-        query.addBindValue(lat_min)
-        query.addBindValue(lat_max)
-        query.addBindValue(lon_min)
-        query.addBindValue(lon_max)
-
-        if not query.exec_():
-            QMessageBox.critical(self, "Database Error", query.lastError().text())
-            return
-
-        QMessageBox.information(self, "Information", "Variables saved to the file and database.")
+        self.directory = ""
+        self.main(self.bulk_data_path, self.Mmin, grid_dir, self.titre, self.grdname, self.Dmin, self.directory)
 
     ######################
     # Grid.exe
     ######################
 
     def on_execute_grid(self):
-        directory = self.Environnement_2.text()
-        title = self.gridprojecttitleLineEdit.text()
-        grdname = self.gridnameLineEdit.text() + '.nc'
         lon_min = float(self.lon_min)
         lon_max = float(self.lon_max)
         lat_min = float(self.lat_min)
         lat_max = float(self.lat_max)
         dl = float(self.dlDoubleSpin.text())
-        topo = self.topodirLineEdit.text()
+        topo = ""
 
-        self.grdname_full_path = qcrocoflow_croco_grid.make_grid_function(title, grdname, lon_min, lon_max, lat_min, lat_max, dl, topo, directory)
+        self.grdname_full_path = qcrocoflow_croco_grid.make_grid_function(self.titre, self.grdname, lon_min, lon_max, lat_min, lat_max, dl, topo, self.directory)
         print(self.grdname_full_path)
 
     ####################
     # Open project
     ##################
-    def load_projects(self):
-        # Execute a request for get all titles of projects pour obtenir tous les titres de projets
-        query = QSqlQuery(self.db)
-        query.exec_("SELECT title FROM Grid")
-
-        # clear ComboBox
-        self.opengridprojectComboBox.clear()
-        self.opengridprojectComboBox.addItem("")
-
-        # Add each title to the ComboBox
-        while query.next():
-            primary_key = query.value(0)
-            self.opengridprojectComboBox.addItem(primary_key)
+    # def load_projects(self):
+    #     # Execute a request for get all titles of projects pour obtenir tous les titres de projets
+    #     query = QSqlQuery(self.db)
+    #     query.exec_("SELECT title FROM Grid")
+    #
+    #     # clear ComboBox
+    #     self.opengridprojectComboBox.clear()
+    #     self.opengridprojectComboBox.addItem("")
+    #
+    #     # Add each title to the ComboBox
+    #     while query.next():
+    #         primary_key = query.value(0)
+    #         self.opengridprojectComboBox.addItem(primary_key)
 
     def update_variables(self, index):
         # Get title of selected project
-        selected_title = self.opengridprojectComboBox.itemText(index)
+        # selected_title = self.opengridprojectComboBox.itemText(index)
 
         # Execut requete for get variables of selected projet
         query = QSqlQuery(self.db)
@@ -946,8 +808,8 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
         query.exec_()
 
         if query.next():
-            directory = query.value(1)
-            grdname = query.value(2)
+            self.directory = query.value(1)
+            self.grdname = query.value(2)
             dl = query.value(3)
 
             topo = query.value(5)
@@ -957,12 +819,7 @@ class qcrocoflow_croco_grid_dialog(QDialog, FORM_CLASS):
             lon_max = query.value(9)
 
             # MAJ variables
-            self.Environnement_2.setText(directory)
-            self.gridprojecttitleLineEdit.setText(selected_title)
-            self.gridnameLineEdit.setText(grdname)
             self.dlDoubleSpin.setValue(float(dl))
-
-            self.topodirLineEdit.setText(topo)
             self.latminLineEdit.setText(str(lat_min))
             self.latmaxLineEdit.setText(str(lat_max))
             self.lonminLineEdit.setText(str(lon_min))

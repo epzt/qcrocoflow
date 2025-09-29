@@ -26,7 +26,9 @@
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 import os
+from os.path import expanduser
 from PyQt5.QtWidgets import QDialog, QCheckBox, QGridLayout, QStackedWidget, QVBoxLayout, QWidget, QMessageBox, QFileDialog
+from qgis.PyQt import QtGui, QtWidgets, uic, Qt
 
 # Seconds since 01-01-1900
 DELTASECONDSCENTURYREFS = datetime(1900,1,1,tzinfo=timezone.utc).timestamp()
@@ -42,9 +44,12 @@ DEFAULTRATIO = 0.6
 # _parent: pointer to a dialog based class (normally the main application)
 #---------------------------------------
 class qcrocoflow_XML_Management:
-    def __init__(self, _parent):
+    def __init__(self, _parent=None):
         self.mainApp = _parent
         self.root = None
+
+        self.project_settings = None
+        self.savedProject = False
 
     #---------------------------------------
     # init_xml_file_project
@@ -54,15 +59,17 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # Root pointer to the newly created tree
     #---------------------------------------
-    def init_xml_file_project(self, _fullpathfilename):
-        if os.path.exists(_fullpathfilename):
-            if QMessageBox.information(self.mainApp, "Overright", f"File {os.path.basename(_fullpathfilename)} exists\nDo you want to erase it ?", \
-                                    buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, \
-                                    defaultButton = QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Cancel:
-                return
-        self.root = ET.Element('Projects')
-        self.root.append(self.new_project_tree(os.path.basename(_fullpathfilename)))
-        tree = ET.ElementTree(self.root)
+    def init_xml_file_project(self, _fullpathfilename, _projectname):
+        tree =  ET.Element('Projects')
+        self.root = self.new_project_tree(tree, _projectname)
+        tree.append(self.root)
+        ET.ElementTree(tree).write(_fullpathfilename)
+        return self.root
+
+    def add_to_xml_file_project(self, _fullpathfilename, _projectname):
+        tree = ET.parse(_fullpathfilename)
+        self.root = self.new_project_tree(tree, _projectname)
+        tree.append(self.root)
         tree.write(_fullpathfilename)
         return self.root
 
@@ -75,48 +82,71 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # an empty project tree
     #---------------------------------------
-    def new_project_tree(self, _projectName):
-        project = ET.Element('Project')
-        project.set('ProjectName', _projectName)
-        project.set('WorkingDirectory','')
-        project.set('CrocoDirectory','')
-        project.set('StartDate','')
-        project.set('EndDate', '')
+    def new_project_tree(self, _root, _projectName=""):
+        assert _root != None
+        project = ET.SubElement(_root, 'Project')
+        project.set('name', _projectName)
+        project.set('wd','')
+        project.set('sdate','')
+        project.set('edate', '')
         # --
-        grid = ET.SubElement(project, 'Grid')
-        coords = ET.SubElement(grid, 'Coords')
-        coords.set('MinLat','')
-        coords.set('MaxLat','')
-        coords.set('MinLon','')
-        coords.set('MaxLon','')
-        grid.set('Resolution','')
-        grid.set('VerticalLevels','')
+        grids = ET.SubElement(project, 'Grids')
+        grids.set('ngrids','')
+        # --
+        grid = ET.SubElement(project, 'Grids')
+        grid.set('level','')
+        grid.set('resolution','')
+        grid.set('nlevels','')
         grid.set('ThetaS','0.0')
         grid.set('ThetaB','0.0')
         grid.set('VTransform','2')
         grid.set('HC','')
+        coords = ET.SubElement(grid, 'Coords')
+        coords.set('latmin','')
+        coords.set('latmax','')
+        coords.set('lonmin','')
+        coords.set('lonmax','')
         bathymetry = ET.SubElement(grid, 'Bathymetry')
-        bathymetry.set('RasterName','')
-        bathymetry.set('Directory','')
-        # --
-        conditions = ET.SubElement(project,'Conditions')
-        sources = ET.SubElement(conditions, 'Sources')
-        initial = ET.SubElement(sources, 'Initial')
-        initial.set('InitialName','')
-        initial.set('Directory','')
-        tide = ET.SubElement(sources,'Tide')
-        tide.set('TideName', '')
-        tide.set('Directory', '')
-        bulk = ET.SubElement(sources, 'Bulk')
-        bulk.set('InitialName', '')
-        bulk.set('Directory', '')
-        waves = ET.SubElement(sources,'Waves')
-        waves.set('InitialName', '')
-        waves.set('Directory', '')
-        sediment = ET.SubElement(sources, 'Sediment')
-        sediment.set('InitialName', '')
-        sediment.set('Directory', '')
+        bathymetry.set('name','')
+        bathymetry.set('dir','')
+        initial = ET.SubElement(grid, 'Initial')
+        initial.set('name','')
+        initial.set('dir','')
+        tide = ET.SubElement(grid,'Tide')
+        tide.set('name', '')
+        tide.set('dir', '')
+        tide.set('ntides', '')
+        tide.set('tidelist', '')
+        bulk = ET.SubElement(grid, 'Bulk')
+        bulk.set('name', '')
+        bulk.set('dir', '')
+        waves = ET.SubElement(grid,'Waves')
+        waves.set('name', '')
+        waves.set('dir', '')
+        sediment = ET.SubElement(grid, 'Sediment')
+        sediment.set('name', '')
+        sediment.set('dir', '')
+        rivers = ET.SubElement(grid, 'Rivers')
+        rivers.set('name', '')
+        rivers.set('dir', '')
+        biology = ET.SubElement(grid, 'Biology')
+        biology.set('name', '')
+        biology.set('dir', '')
         return project
+
+    def set_xml_file_project(self, _projectfilename):
+        tree = ET.parse(_projectfilename)
+        self.root = tree.getroot()
+    def get_project_name(self):
+        return self.project_settings
+
+    def get_xml_root_element_project(self, _projectname):
+        assert self.root != None
+        return self.root.find(f"[project=\"{_projectname}\"]") # Return the element found (should be the sole one)
+
+    def set_xml_project_name(self, _projectname):
+        assert self.root != None
+        self.root.attrib['name'] = _projectname
 
     # ---------------------------------------
     # update_element
@@ -134,7 +164,6 @@ class qcrocoflow_XML_Management:
         if self.root == None:
             QMessageBox.critical(self.mainApp, "No project openned", "No project openned yet")
             return False
-
         return True
 
     def get_project_settings(self, _fullpathfilename):
@@ -150,14 +179,14 @@ class qcrocoflow_XML_Management:
         retValue = ''
         for child in self.root.iter():
             if child.tag == "Project":
-                if child.attrib["CrocoDirectory"] == "":
-                    retValue += "Project name: {}<br>Location: {}".format(child.attrib["ProjectName"],"None defined")
+                if child.attrib["wd"] == "":
+                    retValue += "Project name: {}<br>Location: {}".format(child.attrib["name"],"None defined")
                 else:
-                    retValue += "Project name: {}<br>>Location: {}".format(child.attrib["ProjectName"],child.attrib["CrocoDirectory"])
-                if child.attrib["StartDate"] == "":
+                    retValue += "Project name: {}<br>>Location: {}".format(child.attrib["name"],child.attrib["dir"])
+                if child.attrib["sdate"] == "":
                     retValue += "<br>No start date defined"
-                if child.attrib["EndDate"] == "":
+                if child.attrib["edate"] == "":
                     retValue += "<br>No end date defined"
-                if child.attrib["StartDate"] != "" and child.attrib["EndDate"] != "":
-                    retValue += "<br>from {} to {}".format(child.attrib["StartDate"],child.attrib["EndDate"])
+                if child.attrib["sdate"] != "" and child.attrib["edate"] != "":
+                    retValue += "<br>from {} to {}".format(child.attrib["sdate"],child.attrib["edate"])
         return retValue

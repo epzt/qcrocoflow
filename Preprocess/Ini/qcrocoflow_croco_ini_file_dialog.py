@@ -32,7 +32,13 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QCheckBox, QGridLayout, QStackedWidget, QVBoxLayout, QWidget, QMessageBox, QFileDialog
 from PyQt5.QtCore import Qt
 # Specific imports
-import copernicusmarine
+try:
+    import copernicusmarine
+    COPERNICUSMODULE = True
+except:
+    QMessageBox.warning(None, "Module error", "The module copernicusmarine seems to not be available in the current \
+                                              Python environment.\nWill not be able to do direct download.")
+    COPERNICUSMODULE = False
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_ini_copernicus_dialog.ui'))
