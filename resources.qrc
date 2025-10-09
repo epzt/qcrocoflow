@@ -1,7 +1,10 @@
 <RCC>
-  <qresource prefix="/plugins/qcrocoflow">
+  <qresource prefix="/plugins/QCrocoflow">
+    <file>icons/tpxo9.gif</file>
+    <file>icons/ecmwf.png</file>
     <file>icons/copernicusmarine.png</file>
     <file>icons/iconsmall.png</file>
     <file>icons/probesmall.png</file>
+    <file>icons/rectangle.png</file>
   </qresource>
 </RCC>

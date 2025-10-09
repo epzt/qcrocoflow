@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# qcrocoflow documentation build configuration file, created by
+# QCrocoflow documentation build configuration file, created by
 # sphinx-quickstart on Sun Feb 12 17:11:03 2012.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -15,7 +15,7 @@ import sys, os
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
+# documentation current_project_root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration -----------------------------------------------------
@@ -40,7 +40,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'qcrocoflow'
+project = u'QCrocoflow'
 copyright = u'2013, Emmanuel Poizot'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -178,7 +178,7 @@ htmlhelp_basename = 'TemplateClassdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'qcrocoflow.tex', u'qcrocoflow Documentation',
+  ('index', 'QCrocoflow.tex', u'QCrocoflow Documentation',
    u'Emmanuel Poizot', 'manual'),
 ]
 
@@ -211,6 +211,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'TemplateClass', u'qcrocoflow Documentation',
+    ('index', 'TemplateClass', u'QCrocoflow Documentation',
      [u'Emmanuel Poizot'], 1)
 ]

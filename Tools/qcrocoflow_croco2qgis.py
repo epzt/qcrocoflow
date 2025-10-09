@@ -32,15 +32,15 @@ from qgis.PyQt import QtGui, QtWidgets, uic, Qt
 from qgis.PyQt.QtCore import pyqtSignal
 
 from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog, QVBoxLayout, QComboBox
-from .qcrocoflow_config import *
+from ..Config.qcrocoflow_XML_Management import *
 from .qcrocoflow_timereference import qcrocoflowTIMEREFERENCE
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_croco2qgis_dialog.ui'), resource_suffix='') # Change 13/05/2022
-class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
+class qcrocoflow_croco2qgis(QDialog, FORM_CLASS):
     def __init__(self, currentDir=None, parent=None):
-    # Constructor of qcrocoflowCROCO2QGIS
-        super(qcrocoflowCROCO2QGIS, self).__init__(parent)
+    # Constructor of qcrocoflow_croco2qgis
+        super(qcrocoflow_croco2qgis, self).__init__(parent)
         # Final Setup
         self.setupUi(self)
         # Variables initialisations
@@ -178,10 +178,14 @@ class qcrocoflowCROCO2QGIS(QDialog, FORM_CLASS):
             maxDate = datetime.utcfromtimestamp(maxTime)
             minDate, maxDate = self.GetTimeReference(minDate, maxDate)
             self.UpdateStartEndDate(minDate, maxDate)
+            self.innetCDFStartDateDate.setEnabled(True)
+            self.innetCDFEndDateDate.setEnabled(True)
         else:
             QMessageBox.information(self, "Information", f"{self.innetCDFFileName} as no time dimension")
             minDate = datetime.fromtimestamp(0)
             maxDate = datetime.fromtimestamp(0)
+            self.innetCDFStartDateDate.setEnabled(False)
+            self.innetCDFEndDateDate.setEnabled(False)
         # Normaly 2D variables have no time dimension
         dVar2D = {"dim":2, "vars":self.GetVariablesWithDim(dataset, 2)}
         # 3D variables may or not have time dimension

@@ -27,13 +27,13 @@ from datetime import datetime, timedelta
 from qgis.PyQt import QtGui, QtWidgets, uic, Qt
 
 from PyQt5.QtWidgets import QDialog, QMessageBox, QFileDialog, QVBoxLayout, QComboBox
-from .qcrocoflow_config import *
+from ..Config.qcrocoflow_XML_Management import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_timereference_dialog.ui'), resource_suffix='') # Change 13/05/2022
 class qcrocoflowTIMEREFERENCE(QDialog, FORM_CLASS):
     def __init__(self, _minT, _maxT, parent=None):
-    # Constructor of qcrocoflowCROCO2QGIS
+    # Constructor of qcrocoflow_croco2qgis
         super(qcrocoflowTIMEREFERENCE, self).__init__(parent)
         # Final Setup
         self.setupUi(self)

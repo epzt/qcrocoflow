@@ -44,34 +44,102 @@ DEFAULTRATIO = 0.6
 # _parent: pointer to a dialog based class (normally the main application)
 #---------------------------------------
 class qcrocoflow_XML_Management:
-    def __init__(self, _parent=None):
-        self.mainApp = _parent
-        self.root = None
-
+    def __init__(self, _projectfilename=None, _projectname=None,  _parent=None):
+        self.projectname = _projectname
+        self.fullpathfilename = _projectfilename
         self.project_settings = None
         self.savedProject = False
+        if not _projectfilename is None and not _projectname is None:
+            self.current_project_root = self.get_current_element_root()
+        else:
+            self.current_project_root = None
+
+    @classmethod
+    def is_project_in_file(self, _fullpathfilename:str, _projectname:str)->bool:
+        if not os.path.isfile(_fullpathfilename):
+            return False
+        tree = ET.parse(_fullpathfilename)
+        root = tree.getroot()
+        for project in root:
+            if project.attrib['name'] == _projectname:
+                return True
+        else:
+            return False
+
+    @classmethod
+    def remove_project_in_file(self, _fullpathfilename:str, _projectname:str)->bool:
+        retvalue = False
+        if self.is_project_in_file(_fullpathfilename, _projectname):
+            try:
+                tree = ET.parse(_fullpathfilename)
+                root = tree.getroot()
+                for project in root:
+                    if project.attrib['name'] == _projectname:
+                        root.remove(project)
+                        retvalue = True
+                        break
+                tree.write(_fullpathfilename)
+                return retvalue
+            except:
+                QMessageBox.error(None, "Error", "An error occurred (remove_project_in_file)")
+                return retvalue
+
+    @classmethod
+    def get_list_of_project_in_file(self, _fullpathfilename:str)->list:
+        retvalue = list()
+        tree = ET.parse(_fullpathfilename)
+        root = tree.getroot()
+        try:
+            for p in root.findall("Project"):
+                retvalue.append(p.attrib['name'])
+            return retvalue
+        except:
+            QMessageBox.warning(None, "Error", "An error occurred (get_list_of_project_in_file)")
+            return retvalue
 
     #---------------------------------------
     # init_xml_file_project
     # Create a new empty XML project file.
     # -Arguments -
-    # _fullpathfilename : the full path and name of the newly created XML file
+    # _fullpathfilename : the full path and name of the new XML file to create
+    # _projectname : the name of the new project to create
     # - Returns -
-    # Root pointer to the newly created tree
+    # Root pointer to the newly created tree of the new project (_projectname)
     #---------------------------------------
-    def init_xml_file_project(self, _fullpathfilename, _projectname):
-        tree =  ET.Element('Projects')
-        self.root = self.new_project_tree(tree, _projectname)
-        tree.append(self.root)
-        ET.ElementTree(tree).write(_fullpathfilename)
-        return self.root
 
-    def add_to_xml_file_project(self, _fullpathfilename, _projectname):
-        tree = ET.parse(_fullpathfilename)
-        self.root = self.new_project_tree(tree, _projectname)
-        tree.append(self.root)
-        tree.write(_fullpathfilename)
-        return self.root
+    @classmethod
+    def init_xml_file_project(self, _fullpathfilename:str, _projectname:str)->str:
+        try:
+            tree =  ET.Element('Projects')
+            self.current_project_root = self.new_project_element(_projectname)
+            tree.append(self.current_project_root)
+            ET.ElementTree(tree).write(_fullpathfilename, encoding='utf-8', xml_declaration=True, method='xml')
+            return self.current_project_root
+        except:
+            QMessageBox.error(None, "Error", "An error occurred (init_xml_file_project)")
+            return None
+
+    #---------------------------------------
+    # add_to_xml_file_project
+    # Add a new empty XML project to the file.
+    # -Arguments -
+    # _fullpathfilename : the full path and name of the selected XML file into which to add the new project
+    # _projectname : the name of the new project to create
+    # - Returns -
+    # Root pointer to the newly created and added tree of the new project (_projectname)
+    #---------------------------------------
+    @classmethod
+    def add_to_xml_file_project(self, _fullpathfilename:str, _projectname:str):
+        try:
+            tree = ET.parse(_fullpathfilename)
+            root = tree.getroot()
+            self.current_project_root = self.new_project_element(_projectname)
+            root.append(self.current_project_root)
+            tree.write(_fullpathfilename)
+            return self.current_project_root
+        except:
+            QMessageBox.critical(None, "Error", "An error occurred (add_to_xml_file_project)")
+            return None
 
     #---------------------------------------
     # new_project_tree
@@ -82,9 +150,9 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # an empty project tree
     #---------------------------------------
-    def new_project_tree(self, _root, _projectName=""):
-        assert _root != None
-        project = ET.SubElement(_root, 'Project')
+    @classmethod
+    def new_project_element(self, _projectName=None):
+        project = ET.Element('Project')
         project.set('name', _projectName)
         project.set('wd','')
         project.set('sdate','')
@@ -133,23 +201,44 @@ class qcrocoflow_XML_Management:
         biology.set('name', '')
         biology.set('dir', '')
         return project
-
-    def set_xml_file_project(self, _projectfilename):
-        tree = ET.parse(_projectfilename)
-        self.root = tree.getroot()
-    def get_project_name(self):
-        return self.project_settings
-
-    def get_xml_root_element_project(self, _projectname):
-        assert self.root != None
-        return self.root.find(f"[project=\"{_projectname}\"]") # Return the element found (should be the sole one)
-
-    def set_xml_project_name(self, _projectname):
-        assert self.root != None
-        self.root.attrib['name'] = _projectname
+    #---------------------------------------
+    # get_current_element_root
+    # Return the element root of the current project file
+    # - Arguments -
+    # None
+    # - Return -
+    # the element root of the project file
+    #---------------------------------------
+    def get_current_element_root(self):
+        retvalue = None
+        if not self.fullpathfilename is None and not self.projectname is None:
+            if self.is_project_in_file(self.fullpathfilename, self.projectname):
+                try:
+                    tree = ET.parse(self.fullpathfilename)
+                    root = tree.getroot()
+                    for project in root:
+                        if project.attrib['name'] == self.projectname:
+                            retvalue = project
+                            break
+                except:
+                    QMessageBox.warning(None, "Error", "Mistake: No element root set yet (get_current_element_root)")
+        return retvalue
+    #---------------------------------------
+    # get_current_project_name
+    # Return the current project name
+    # - Arguments -
+    # None
+    # - Return -
+    # the name of the current opened project
+    #---------------------------------------
+    def get_current_project_name(self)->str:
+        if self.projectname != self.current_project_root.attrib['name']:
+            QMessageBox.warning(None, "Error", f"Mistake: {self.projectname} <-> {self.current_project_root['name']}")
+            return None
+        return self.projectname
 
     # ---------------------------------------
-    # update_element
+    # set_element_value
     # Update an element or attribut of the tree if exist otherwise create it
     # Elements or attributs are found base on the parent (_parent)
     # - Arguments -
@@ -159,34 +248,14 @@ class qcrocoflow_XML_Management:
     # - Returns -
     # Return True or False
     # ---------------------------------------
-    def update_element(self, _parent, _object, _value=None) -> bool:
+    def set_element_value(self, _parent, _element, _value=None) -> bool:
         # A project must be openned
-        if self.root == None:
-            QMessageBox.critical(self.mainApp, "No project openned", "No project openned yet")
+        if _parent == None:
+            QMessageBox.critical(None, "Error", "Mistake: No element root set yet (update_element)")
+            return False
+        try:
+            _parent[_element] = _value
+        except:
             return False
         return True
 
-    def get_project_settings(self, _fullpathfilename):
-        if not os.path.exists(_fullpathfilename):
-            QMessageBox.critical(self.mainApp, "No project file", "Can not found {}".format(_fullpathfilename))
-            return
-        tree = ET.parse(_fullpathfilename)
-        self.root = tree.getroot()
-        return self.root
-
-    def print_project_settings(self):
-        assert self.root != None
-        retValue = ''
-        for child in self.root.iter():
-            if child.tag == "Project":
-                if child.attrib["wd"] == "":
-                    retValue += "Project name: {}<br>Location: {}".format(child.attrib["name"],"None defined")
-                else:
-                    retValue += "Project name: {}<br>>Location: {}".format(child.attrib["name"],child.attrib["dir"])
-                if child.attrib["sdate"] == "":
-                    retValue += "<br>No start date defined"
-                if child.attrib["edate"] == "":
-                    retValue += "<br>No end date defined"
-                if child.attrib["sdate"] != "" and child.attrib["edate"] != "":
-                    retValue += "<br>from {} to {}".format(child.attrib["sdate"],child.attrib["edate"])
-        return retValue

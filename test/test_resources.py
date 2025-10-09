@@ -31,7 +31,7 @@ class qcrocoflowDialogTest(unittest.TestCase):
 
     def test_icon_png(self):
         """Test we can click OK."""
-        path = ':/plugins/qcrocoflow/icon.png'
+        path = ':/plugins/QCrocoflow/icon.png'
         icon = QIcon(path)
         self.assertFalse(icon.isNull())
 

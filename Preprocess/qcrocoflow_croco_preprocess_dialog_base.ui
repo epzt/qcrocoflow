@@ -32,7 +32,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../../resources.qrc">
-    <normaloff>:/plugins/qcrocoflow/icons/iconsmall.png</normaloff>:/plugins/qcrocoflow/icons/iconsmall.png</iconset>
+    <normaloff>:/plugins/QCrocoflow/icons/iconsmall.png</normaloff>:/plugins/QCrocoflow/icons/iconsmall.png</iconset>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -657,7 +657,7 @@ maximum depth of studied area</string>
         </property>
         <property name="icon">
          <iconset resource="../../resources.qrc">
-          <normaloff>:/plugins/qcrocoflow/icons/rectangle.png</normaloff>:/plugins/qcrocoflow/icons/rectangle.png</iconset>
+          <normaloff>:/plugins/QCrocoflow/icons/rectangle.png</normaloff>:/plugins/QCrocoflow/icons/rectangle.png</iconset>
         </property>
         <property name="iconSize">
          <size>
@@ -710,7 +710,7 @@ maximum depth of studied area</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../resources.qrc">:/plugins/qcrocoflow/icons/copernicusmarine.png</pixmap>
+         <pixmap resource="../../resources.qrc">:/plugins/QCrocoflow/icons/copernicusmarine.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -915,7 +915,7 @@ maximum depth of studied area</string>
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="../../resources.qrc">:/plugins/qcrocoflow/icons/tpxo9.gif</pixmap>
+        <pixmap resource="../../resources.qrc">:/plugins/QCrocoflow/icons/tpxo9.gif</pixmap>
        </property>
        <property name="scaledContents">
         <bool>true</bool>
@@ -1001,7 +1001,7 @@ maximum depth of studied area</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../resources.qrc">:/plugins/qcrocoflow/icons/ecmwf.png</pixmap>
+         <pixmap resource="../../resources.qrc">:/plugins/QCrocoflow/icons/ecmwf.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>

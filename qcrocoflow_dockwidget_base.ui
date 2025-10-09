@@ -10,17 +10,21 @@
     <height>300</height>
    </rect>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>icons/iconsmall.png</normaloff>icons/iconsmall.png</iconset>
+  </property>
   <property name="windowTitle">
-   <string>QCrocoFlow</string>
+   <string>QCrocoflow</string>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <widget class="QTextEdit" name="messagelogTextEdit">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>5</y>
+      <x>0</x>
+      <y>20</y>
       <width>350</width>
-      <height>261</height>
+      <height>191</height>
      </rect>
     </property>
     <property name="maximumSize">
@@ -32,6 +36,5 @@
    </widget>
   </widget>
  </widget>
- <resources/>
  <connections/>
 </ui>

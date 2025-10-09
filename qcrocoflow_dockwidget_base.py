@@ -26,4 +26,4 @@ class Ui_qcrocoflowDockWidgetBase(object):
 
     def retranslateUi(self, qcrocoflowDockWidgetBase):
         _translate = QtCore.QCoreApplication.translate
-        qcrocoflowDockWidgetBase.setWindowTitle(_translate("qcrocoflowDockWidgetBase", "QCrocoFlow"))
+        qcrocoflowDockWidgetBase.setWindowTitle(_translate("qcrocoflowDockWidgetBase", "QCrocoflow"))

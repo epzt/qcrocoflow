@@ -1,5 +1,5 @@
 #/***************************************************************************
-# qcrocoflow
+# QCrocoflow
 #
 # A QGIS plugin to manage CROCO projectsqcrocoflow
 #							 -------------------
@@ -22,8 +22,7 @@
 # Edit the following to match your sources lists
 #################################################
 
-
-#Add iso code for any locales you want to support here (space separated)
+# Add iso code for any locales you want to support here (space separated)
 # default is no locales
 # LOCALES = af
 LOCALES = en
@@ -31,31 +30,39 @@ LOCALES = en
 # If locales are enabled, set the name of the lrelease binary on your system. If
 # you have trouble compiling the translations, you may have to specify the full path to
 # lrelease
-#LRELEASE = lrelease
+# LRELEASE = lrelease
 #LRELEASE = lrelease-qt4
 
 # translation
 SOURCES = \
 	__init__.py \
-	qcrocoflow.py qcrocoflow_dockwidget.py qcrocoflow_croco2qgis.py qcrocoflow_timerefrence.py \
-	qcrocoflow_config.py  qcrocoflow_croco2qgis_dialog.py qcrocoflow_dialog.py qcrocoflow_dialog_base.py \
-	qcrocoflow_dockwidget_base.py qcrocoflow_qcrocotools.py qcrocoflow_timereference_dialog.py
+	qcrocoflow.py \
+	qcrocoflow_dockwidget.py \
+	qcrocoflow_dockwidget_base.py
 
-PLUGINNAME = qcrocoflow
+PLUGINNAME = QCrocoflow
 
 PY_FILES = \
 	__init__.py \
-	qcrocoflow.py qcrocoflow_dockwidget.py qcrocoflow_croco2qgis.py qcrocoflow_timereference.py \
-	qcrocoflow_config.py  qcrocoflow_croco2qgis_dialog.py qcrocoflow_dialog.py qcrocoflow_dialog_base.py \
-	qcrocoflow_dockwidget_base.py qcrocoflow_qcrocotools.py qcrocoflow_timereference_dialog.py
+	qcrocoflow.py \
+	qcrocoflow_dockwidget.py \
+	qcrocoflow_dockwidget_base.py \
+	resources_rc.py \
+	plugin_upload.py
 
+UI_FILES = \
+ 	qcrocoflow_dockwidget_base.ui
 
-UI_FILES = qcrocoflow_dockwidget_base.ui qcrocoflow_croco2qgis_dialog.ui qcrocoflow_timereference_dialog.ui \
-           qcrocoflow_dialog_base.ui ./Preprocess/qcrocoflow_crocogrid_dialog_base.ui
+EXTRAS = metadata.txt 
+#	README.md \
+	LICENSE.txt \
+	CHANGELOG.txt \
+	pylintrc \
+	Makefile
 
-EXTRAS = metadata.txt icon.png
-
-EXTRA_DIRS = Preprocess
+EXTRA_DIRS = Preprocess \
+			 Config \
+			 Tools
 
 COMPILED_RESOURCE_FILES = resources.py
 
@@ -124,7 +131,7 @@ deploy: compile doc transcompile
 	@echo "------------------------------------------"
 	# The deploy  target only works on unix like operating system where
 	# the Python plugin directory is located at:
-	# $HOME/$(QGISDIR)/python/plugins
+	# $(HOME)/$(QGISDIR)/python/plugins
 	mkdir -p $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(PY_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(UI_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
@@ -132,9 +139,14 @@ deploy: compile doc transcompile
 	cp -vf $(EXTRAS) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr i18n $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr $(HELP) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)/help
-	# Copy extra directories if any
-	$(foreach EXTRA_DIR,$(EXTRA_DIRS), cp -R $(EXTRA_DIR) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME))
-
+	# Copy extra directories
+# $(foreach EXTRA_DIR,$(EXTRA_DIRS), "Copying extra directory: $(EXTRA_DIR)")	
+# $(foreach EXTRA_DIR,$(EXTRA_DIRS), cp -vfr $(EXTRA_DIR) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME))
+	cp -vfr Tools $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vfr Preprocess $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vfr Config $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	@echo
+	@echo "Plugin deployed to: $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)"
 
 # The dclean target removes compiled python files from plugin directory
 # also deletes any .git entry

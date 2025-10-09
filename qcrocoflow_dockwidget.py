@@ -22,59 +22,39 @@
  ***************************************************************************/
 """
 
-import os
 from pathlib import Path
 
 from qgis.gui import (
-    QgsMapToolEmitPoint,
-    QgsMessageBar)
-from qgis.core import (
-    QgsCoordinateReferenceSystem,
-    QgsRasterLayer,
-    QgsProject,
-    QgsMessageLog,
-    Qgis)
+    QgsMapToolEmitPoint)
 
-from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt, QEvent, QRect
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtWidgets import (
-    QDialog,
-    QMessageBox,
-    QFileDialog,
-    QVBoxLayout, QHBoxLayout, QGridLayout,
-    QComboBox,
     QMenuBar,
     QAction,
-    QMainWindow,
-    QApplication,
-    QTextEdit,
-    QToolBar,
-    QLabel,
-    QDockWidget,
-    QWidget,
-    QLineEdit,
-    QPushButton)
+    QLineEdit)
 from PyQt5.QtWidgets import QInputDialog
 
 
 import netCDF4 as nc
 import datetime
 
-from .qcrocoflow_croco2qgis import qcrocoflowCROCO2QGIS
-from .qcrocoflow_croco_tools import qcrocoflow_crocotools_netCDFtoRaster
-from .qcrocoflow_config import *
-from .Preprocess.Grid.qcrocoflow_croco_grid_dialog import *
+from .Tools.qcrocoflow_croco2qgis import *
+from .Tools.qcrocoflow_qgis2croco import *
+from .Tools.qcrocoflow_croco_tools import qcrocoflow_crocotools_netCDFtoRaster
+from .Config.qcrocoflow_XML_Management import *
+from .Config.qcrocoflow_XML_project_management_dialog import qcrocoflow_XML_project_management_dialog
+from .Preprocess.qcrocoflow_croco_preprocess_dialog import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qcrocoflow_dockwidget_base.ui'))
 
-class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+class qcrocoflow_dockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
 
     def __init__(self, _iface, parent=None):
         """Constructor."""
-        super(qcrocoflow_DockWidget, self).__init__(parent)
+        super(qcrocoflow_dockwidget, self).__init__(parent)
         # Set up the user interface from Designer.
         # After setupUI you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see
@@ -86,9 +66,9 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.grdDlg = None
         self.projectOpened = False
         self.projectName = None
-        self.xmlProject = None
+        self.currentProject = None
         self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
-        self.currentWorkingDirectory = os.path.expanduser("~user")
+        self.current_project_config = qcrocoflow_XML_Management(self)
 
     # Construction of menu bar entries and relative actions
         self.myQMenuBar = QMenuBar(self)
@@ -118,8 +98,16 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.closeProjectAction.setEnabled(False)
         self.closeProjectAction.triggered.connect(self.close_project)
         self.projectMenu.addAction(self.closeProjectAction)
+        # ---
+        self.projectMenu.addSeparator()
+        # ---
+        self.quitQcrocoFlow = QAction('Quit', self)
+        self.quitQcrocoFlow.setEnabled(True)
+        self.quitQcrocoFlow.triggered.connect(self.quit_qcrocoflow)
+        self.projectMenu.addAction(self.quitQcrocoFlow)
         ### Grid ################################
         self.gridMenu = self.myQMenuBar.addMenu('Grid')
+        self.gridMenu.setEnabled(False)
         self.newGridAction = QAction('New...', self)
         self.newGridAction.triggered.connect(self.new_grid)
         self.gridMenu.addAction(self.newGridAction)
@@ -128,9 +116,13 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.openGridAction.triggered.connect(self.open_grid)
         self.gridMenu.addAction(self.openGridAction)
         # ---
-        self.importGridAction = QAction('Import NetCDF...', self)
-        self.importGridAction.triggered.connect(self.import_netcdf_grid)
-        self.gridMenu.addAction(self.importGridAction)
+        self.manageGridMenu= self.gridMenu.addMenu('Manage')
+        self.importGridAction = QAction('To raster...', self)
+        self.importGridAction.triggered.connect(self.import_from_netcdf_grid)
+        self.exportGridAction = QAction('From raster...', self)
+        self.exportGridAction.triggered.connect(self.export_to_netcdf_grid)
+        self.manageGridMenu.addAction(self.importGridAction)
+        self.manageGridMenu.addAction(self.exportGridAction)
         # ---
         self.gridMenu.addSeparator()
         # ---
@@ -144,6 +136,7 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setConditionMenu.addAction(self.openBoundaryConditionAction)
         ### Sediment ################################
         self.sedimentMenu = self.myQMenuBar.addMenu('Sediment')
+        self.sedimentMenu.setEnabled(False)
         self.newSedimentAction = QAction('New...', self)
         self.newSedimentAction.triggered.connect(self.new_sediment)
         self.sedimentMenu.addAction(self.newSedimentAction)
@@ -182,13 +175,18 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.pointTool = QgsMapToolEmitPoint(canvas)
         self.pointTool.canvasClicked.connect(self.display_point)
 
+    def quit_qcrocoflow(self):
+        return
+
+    def get_project_config(self):
+        return self.current_project_config
+
     def set_to_default_variable_value(self, _type):
         if _type == 'PROJECT':
             self.projectOpened = False
             self.projectName = None
-            self.xmlProject = None
+            self.currentProject = None
             self.projectDirectory = os.path.expanduser("~user") # Default value for project directory
-            self.currentWorkingDirectory = os.path.expanduser("~user")
 
     def display_point(self, pnt):
         QMessageBox.information(self.iface.mainWindow(), "Coordinate tracking", "x: {:.6f} - y: {:.6f}".format(pnt[0], pnt[1]))
@@ -200,83 +198,89 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         print('Hello')
 
     def new_project(self) -> None:
-        # Create a new empty QCrocoFlow project
+        # Create a new empty QCrocoflow project
         if self.projectOpened and self.projectName:
-            QMessageBox.warning(self, "Project file", f"The QCrocoFlow project {self.projectName} is currently opened.\nClose it before create a new one")
+            QMessageBox.warning(self, "Project file", f"The QCrocoflow project {self.projectName} is currently opened.\nClose it before create a new one")
             return
-        dialog = QFileDialog(self)
-        dialog.setOptions(QFileDialog.DontUseNativeDialog)
-        dialog.setFileMode(QFileDialog.DirectoryOnly)
-        dialog.setOption(QFileDialog.ShowDirsOnly)
-        dialog.setWindowTitle("Select a directory")
-        # dialog.setViewMode(QFileDialog.List)
-        if dialog.exec():
-            selected_dir = dialog.directory()  # Get the first element of the returned list
-            xml_file_name = 'qcfqgis.xml'
-            selected_full_path_file_name = os.path.join(selected_dir.absolutePath(), xml_file_name)
-            if os.path.isfile(selected_full_path_file_name):
-                ans = QMessageBox.information(self, "Project file exist", f"Do you want to overwrite {selected_full_path_file_name} ?",
-                            buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
-                             defaultButton = QMessageBox.StandardButton.Cancel)
-                if ans == QMessageBox.StandardButton.Cancel:
-                    return
-            QMessageBox.information(self, "Project", f"{selected_full_path_file_name}")
-            self.projectName = xml_file_name.split('.')[0]
-            self.projectDirectory = selected_dir
-            self.currentWorkingDirectory = selected_dir
-            # TODO: manage creation of empty project file here
-            self.xmlProject = qcrocoflow_XML_Management(self)
-            self.xmlProject.init_xml_file_project(selected_full_path_file_name)
+        #If here, can ask for name and directory where to store new project
+        newprojectdlg = qcrocoflow_XML_project_management_dialog()
+        result = newprojectdlg.exec()
+        if result == QDialog.Accepted:
+            xml_file_name = newprojectdlg.get_file_name() # Get the filename with its extension (.xml)
+            selected_full_path_file_name = newprojectdlg.get_full_path_file_name() # Get full path and name (with extension)
+            self.projectName = newprojectdlg.get_current_project_name() # Get the project name
+            self.projectDirectory = newprojectdlg.get_directory() # Get selected directory where to store the file
+            self.currentProject = qcrocoflow_XML_Management(_parent=self, _projectname=self.projectName, _projectfilename=selected_full_path_file_name)
+            if self.currentProject.is_project_in_file(selected_full_path_file_name, self.projectName):
+                answer = QMessageBox.question(self, "Replace or rename",
+                                     f"Project \"{self.projectName}\" is present in file {xml_file_name}\n \
+                                     Select \"Discard\" to quit and change the project name\n \
+                                     Select \"Ignore\" to erase previous project settings\n \
+                                     Select \"Close\" to do nothing",
+                                     buttons=QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Ignore | QMessageBox.StandardButton.Close, \
+                                     defaultButton=QMessageBox.StandardButton.Close)
+                if answer == QMessageBox.StandardButton.Close or answer == QMessageBox.StandardButton.Discard:
+                    return # Do nothing
+                if answer == QMessageBox.StandardButton.Ignore:
+                    if self.currentProject.remove_project_in_file(selected_full_path_file_name, self.projectName):
+                        QMessageBox.warning(self, "Project name", f"Project \"{self.projectName}\" erased from {os.path.basename(selected_full_path_file_name)}.")
+                        self.currentProject.add_to_xml_file_project(selected_full_path_file_name, self.projectName) # Add new project to existing file
+            else:
+                if os.path.isfile(selected_full_path_file_name):
+                    self.currentProject.add_to_xml_file_project(selected_full_path_file_name, self.projectName)
+                else:
+                    self.currentProject.init_xml_file_project(selected_full_path_file_name, self.projectName)
 
+            # Menu updates to active actions
             self.projectOpened = True
             self.saveProjectAction.setEnabled(True)
             self.saveAsProjectAction.setEnabled(True)
             self.closeProjectAction.setEnabled(True)
+            self.gridMenu.setEnabled(True)
+            self.sedimentMenu.setEnabled(True)
         else:
-            QMessageBox.information(self, "Project file", "No QCrocoFlow project file created")
-        return
+            QMessageBox.information(self, "Project file", "No QCrocoflow project file created")
+
 
     def open_project(self) -> None:
-    # Open an existing QCrocoFlow  project
+        # Open an existing QCrocoflow  project
         if self.projectOpened and self.projectName:
-            QMessageBox.warning(self, "Project file", f"The QCrocoFlow project {self.projectName} is currently opened.\nClose it before open a new one")
+            QMessageBox.warning(self, "Project file", f"The QCrocoflow project {self.projectName} is currently opened.\nClose it before open a new one")
             return
-        dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setNameFilter("QCF project (*.xml *.XML)")
-        dialog.setWindowTitle("Open QCrocoFlow existing project file")
-        dialog.setViewMode(QFileDialog.Detail)
-        if dialog.exec():
-            selected_file_name = dialog.selectedFiles()[0] # Get the first element of the returned list
-            self.projectName = os.path.basename(selected_file_name)
-            self.projectDirectory = os.path.dirname(selected_file_name)
-            self.currentWorkingDirectory  = os.path.dirname(selected_file_name)
-            self.projectOpened = True
+        # If here, can ask for name and directory where to store new project
+        openprojectdlg = qcrocoflow_XML_project_management_dialog(_type="open")
+        result = openprojectdlg.exec()
+        if result == QDialog.Accepted:
+            self.projectName = openprojectdlg.get_current_project_name() # Get the project name
+            self.projectDirectory = openprojectdlg.get_directory() # Get selected directory where to store the file
             # TODO: manage import of project file here
-            self.xmlProject = qcrocoflow_XML_Management(self)
-            self.xmlProject.get_project_settings(selected_file_name)
-            self.add_message(self.xmlProject.print_project_settings(), "green")
+            self.currentProject = qcrocoflow_XML_Management(openprojectdlg.get_full_path_file_name(), self.projectName, self)
+            if not self.currentProject.get_current_element_root():
+                QMessageBox.warning(self, "Error", f"Project {openprojectdlg.get_current_project_name()} is not in {openprojectdlg.get_file_name()}")
+                self.add_message(f"{openprojectdlg.get_current_project_name()} not opened", "red")
+                return
+            self.add_message(self.currentProject.get_current_project_name(), "green")
 
+            # Project menu updates to active actions
             self.projectOpened = True
             self.saveProjectAction.setEnabled(True)
             self.saveAsProjectAction.setEnabled(True)
             self.closeProjectAction.setEnabled(True)
+            self.gridMenu.setEnabled(True)
+            self.sedimentMenu.setEnabled(True)
         else:
-            QMessageBox.information(self, "Project file", "No QCrocoFlow project file selected")
-        return
+            self.add_message("No QCrocoflow project file opened", "red")
 
     def save_project(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")
-        return
 
     def save_as_project(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")
-        return
 
     def close_project(self) -> None:
     # Manage close de project: empty runtime variables, etc.
         if not self.projectOpened:
-            QMessageBox.information(self, "Project file", "No QCrocoFlow project yet opened")
+            QMessageBox.information(self, "Project file", "No QCrocoflow project yet opened")
             return
         ans = QMessageBox.question(self, "Project file", f"Do you really want to close {self.projectName} project ?",
                              buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -289,15 +293,14 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.saveProjectAction.setEnabled(False)
             self.saveAsProjectAction.setEnabled(False)
             self.closeProjectAction.setEnabled(False)
+            self.gridMenu.setEnabled(False)
+            self.sedimentMenu.setEnabled(False)
             self.projectDirectory = ""
-            self.currentWorkingDirectory = ""
-        return
 
     def new_grid(self) -> None:
     # Creation of a new grid
-        self.grdDlg = qcrocoflow_croco_grid_dialog(self.iface, parent=self)
+        self.grdDlg = qcrocoflow_croco_preprocess_dialog(self.iface, self)
         self.grdDlg.show()
-        return
 
     def open_grid(self) -> None:
         # Define the database
@@ -309,11 +312,9 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not db.open():
             QMessageBox.critical(self, "Database Error", db.lastError().text())
             return
-
         query = QSqlQuery(db)
         query.exec_(
             "SELECT title FROM Grid")  #
-
         # Récupérez les résultats de la requête
         items = []
         while query.next():
@@ -339,7 +340,7 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 lon_max = query.value(9)
 
                 # Open grid dialog
-                self.grdDlg = qcrocoflow_crocogridDialog(self.iface, parent=self)
+                self.grdDlg = qcrocoflow_croco_preprocess_dialog(_iface=self.iface, _parent=self)
                 self.grdDlg.show()
 
                 # Mettez à jour les variables
@@ -357,9 +358,9 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 QMessageBox.warning(self, "No Data", "No data found for the selected project.")
 
 
-    def import_netcdf_grid(self) -> None:
+    def import_from_netcdf_grid(self) -> None:
     # Import variables from a netCDF file to create raster or vector layers in QGIS
-        open_grid_dlg = qcrocoflowCROCO2QGIS(self.currentWorkingDIrectory, self)
+        open_grid_dlg = qcrocoflow_croco2qgis(currentDir="", parent=self)
         if open_grid_dlg.exec():
             nc_file = open_grid_dlg.GetNetCDFFileName()
             vars_dict = open_grid_dlg.GetDictOfVars() # A dictionary of selected variables is returned for each dimension
@@ -367,8 +368,20 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if len(vars_dict.keys()) == 0:
                 QMessageBox.information(self, 'List of variables', f"No variable selected.")
                 return
-            self.add_net_cdf_variables_to_mapset(nc_file, vars_dict, coords_dict)
-        return
+            self.add_netcdf_variables_to_mapset(nc_file, vars_dict, coords_dict)
+
+    def export_to_netcdf_grid(self) -> None:
+    # Import variables from a netCDF file to create raster or vector layers in QGIS
+        open_grid_dlg = qcrocoflow_qgis2croco(currentDir="", parent=self)
+        if open_grid_dlg.exec():
+            return
+            #nc_file = open_grid_dlg.GetNetCDFFileName()
+            #vars_dict = open_grid_dlg.GetDictOfVars() # A dictionary of selected variables is returned for each dimension
+            #coords_dict = open_grid_dlg.GetDictOfCoords() # A dictionary of selected coordinate variables
+            #if len(vars_dict.keys()) == 0:
+            #    QMessageBox.information(self, 'List of variables', f"No variable selected.")
+            #    return
+            #self.add_netcdf_variables_to_mapset(nc_file, vars_dict, coords_dict)
 
     def add_netcdf_variables_to_mapset(self, _file: str, _vars_dict: dict, _coords_dict: dict) -> None:
     # Add a raster to the current mapset based on a variable from a netCDF file
@@ -463,11 +476,9 @@ class qcrocoflow_DockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         form_search.setLayout(layout)
         self.setWidget(form_search)
         self.iface.messageBar().pushMessage("New sediment netCDF file")
-        return
 
     def open_sediment(self) -> None:
         QMessageBox.information(self, "Project file", "Not implemented yet")
-        return
 
     def close_event(self, event)-> None:
         self.closingPlugin.emit()
